@@ -74,36 +74,47 @@ Netclient::~Netclient() {
 
 }
 
+
+
 int Netclient::receive_message(char* rx_message, int max_rx, const char* termex)
 {
 	char buf[1025];
 	int nrx = buffer.size();
+	std::regex term_regex(termex);
 
 	while(1){
 		int rc = recv(skt, buf, 1024, 0);
 		if (rc <= 0){
 			error("shutdown\n");
 		}
-		nrx += rc;
-		buf[rc] = '\0';
-		printf("<%s\n", buf);
-		if (strstr(buf, termex)){
-			for (int ii = 0; ii < termex-buf+strlen(termex); ++ii){
-				buffer.push_back(buf[ii]);
-				if (nrx > max_rx){
-					nrx = max_rx;
-				}
 
-				strncpy(rx_message, buffer.data(), nrx);
-				buffer.clear();
-				printf("copy %d: %s\n", nrx, rx_message);
-				// add any more stuff to buffer?
-				return nrx;
+		buf[rc] = '\0';
+		//printf("<%s\n", buf);
+
+		std::cmatch cm;
+		if (std::regex_search(buf, cm, term_regex)){
+			//printf("match cursor:%d string:\"%s\"\n", cm.position(), buf);
+			nrx += cm.position();
+			for (int ii = 0; ii < cm.position(); ++ii){
+				buffer.push_back(buf[ii]);
 			}
+			if (nrx >= max_rx){
+				nrx = max_rx;
+			}
+			while(buffer.data()[nrx-1] =='\n'){
+				--nrx;
+			}
+			strncpy(rx_message, buffer.data(), nrx);
+			rx_message[nrx] = '\0';
+			buffer.clear();
+			//printf("copy %d: \"%s\"\n", nrx, rx_message);
+			// add any more stuff to buffer?
+			return nrx;
 		}else{
 			for (int ii = 0; ii < rc; ++ii){
 				buffer.push_back(buf[ii]);
 			}
+			nrx += rc;
 		}
 	}
 
@@ -123,13 +134,13 @@ int Siteclient::sr(char* rx_message, int max_rx, const char* txfmt, ...)
 	vsnprintf (lbuf, 128, txfmt, args);
 	va_end (args);
 	strcat(lbuf, "\n");
-	printf("> %s", lbuf);
+	//printf("> %s", lbuf);
 	rc = send(skt, lbuf, ::strlen(lbuf), 0);
 	if (rc != strlen(lbuf)){
 		error("send tried %d returned %d\n", strlen(lbuf), rc);
 	}
 	if (max_rx){
-		rc = receive_message(rx_message, max_rx, ">");
+		rc = receive_message(rx_message, max_rx, "(acq400.[0-9]+ ([0-9]+) >)");
 	}else{
 		rc = 0;
 	}
