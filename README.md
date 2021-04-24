@@ -2,3 +2,4 @@
 
 - network host api, similar to but lighter than HAPI, the python Host API
 
+*** NB: this is still very skeletal ***
