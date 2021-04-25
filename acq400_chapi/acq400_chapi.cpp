@@ -19,6 +19,10 @@
 #include <netdb.h>
 #include <errno.h>
 
+// boost
+#include <bits/stdc++.h>
+#include <boost/algorithm/string.hpp>
+
 
 #include <regex>
 
@@ -121,32 +125,110 @@ int Netclient::receive_message(char* rx_message, int max_rx, const char* termex)
 	return 0;
 }
 
-Siteclient::Siteclient(const char* _addr, int _port) : Netclient(_addr, _port) {
+
+int getenvint(const char* key, int def)
+{
+	const char *val = ::getenv(key);
+	if (val){
+		return strtol(val, 0, 0);
+	}else{
+		return def;
+	}
+}
+
+Siteclient::Siteclient(const char* _addr, int _port) :
+		Netclient(_addr, _port), trace(getenvint("SITECLIENT_TRACE", 0))
+{
 	char gash[64];
 	sr(gash, 64, "prompt on");
 }
-int Siteclient::sr(char* rx_message, int max_rx, const char* txfmt, ...)
+
+int Siteclient::_sr(char* rx_message, int max_rx, const char* tx)
 {
-	char lbuf[130];
-	int rc;
-	va_list args;
-	va_start (args, txfmt);
-	vsnprintf (lbuf, 128, txfmt, args);
-	va_end (args);
-	strcat(lbuf, "\n");
-	//printf("> %s", lbuf);
-	rc = send(skt, lbuf, ::strlen(lbuf), 0);
-	if (rc != strlen(lbuf)){
-		error("send tried %d returned %d\n", strlen(lbuf), rc);
+	if (trace) printf(">%s", tx);
+	int rc = send(skt, tx, ::strlen(tx), 0);
+	if (rc != strlen(tx)){
+		error("send tried %d returned %d\n", strlen(tx), rc);
 	}
 	if (max_rx){
 		rc = receive_message(rx_message, max_rx, "(acq400.[0-9]+ ([0-9]+) >)");
+		if (trace) printf("<%s\n", rx_message);
 	}else{
 		rc = 0;
 	}
 
 	return rc;
 }
+int Siteclient::sr(char* rx_message, int max_rx, const char* txfmt, ...)
+{
+	char lbuf[130];
 
-
+	va_list args;
+	va_start (args, txfmt);
+	vsnprintf (lbuf, 128, txfmt, args);
+	va_end (args);
+	strcat(lbuf, "\n");
+	return _sr(rx_message, max_rx, lbuf);
 }
+
+Acq400::Acq400(const char* _uut): uut(_uut) {
+	Siteclient* s0 = new Siteclient(uut, 4220);
+	char _sitelist[80];
+	s0->sr(_sitelist, 80, "sites");
+	sites["0"] = s0;
+
+	std::vector<std::string> sitelist;
+	boost::split(sitelist, _sitelist, boost::is_any_of(","));
+	for (int i = 0; i < sitelist.size(); i++){
+		sites[sitelist[i]] = 0;	// lazy init
+	}
+};
+
+
+int Acq400::set(std::string* response, const std::string& site, const char* fmt, ...)
+{
+	char lbuf[130];
+	char rx_message[16384];
+
+	va_list args;
+	va_start (args, fmt);
+	vsnprintf (lbuf, 128, fmt, args);
+	va_end (args);
+	strcat(lbuf, "\n");
+
+	Siteclient* sc = sites[site];
+	if (sc == 0){
+		sites[site] = sc = new Siteclient(uut, 4220+atoi(site.c_str()));
+	}
+
+	int rc = sc->_sr(rx_message, 16384, lbuf);
+	if (rc > 0 && response){
+		response->append(rx_message);
+	}
+	return rc;
+}
+int Acq400::get(std::string* response, const std::string& site, const char* fmt, ...)
+{
+	char lbuf[130];
+	char rx_message[16384];
+
+	va_list args;
+	va_start (args, fmt);
+	vsnprintf (lbuf, 128, fmt, args);
+	va_end (args);
+	strcat(lbuf, "\n");
+
+	Siteclient* sc = sites[site];
+	if (sc == 0){
+		sites[site] = sc = new Siteclient(uut, 4220+atoi(site.c_str()));
+	}
+
+	int rc = sc->_sr(rx_message, 16384, lbuf);
+	if (rc > 0 && response){
+		response->append(rx_message);
+	}
+	return rc;
+}
+
+
+}	// namespace acq400_chapi
