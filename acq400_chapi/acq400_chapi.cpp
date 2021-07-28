@@ -171,7 +171,7 @@ int Siteclient::sr(char* rx_message, int max_rx, const char* txfmt, ...)
 	return _sr(rx_message, max_rx, lbuf);
 }
 
-Acq400::Acq400(const char* _uut): uut(_uut) {
+Acq400::Acq400(const char* _uut): uut(_uut), fstream(0) {
 	Siteclient* s0 = new Siteclient(uut, 4220);
 	char _sitelist[80];
 	s0->sr(_sitelist, 80, "sites");
@@ -230,5 +230,25 @@ int Acq400::get(std::string* response, const std::string& site, const char* fmt,
 	return rc;
 }
 
+FILE* Acq400::stream_open(enum Ports port)
+{
+	if (fstream == 0){
+		int stream_socket = connect(uut, port);
+		if (stream_socket < 0){
+			perror("stream socket");
+			exit(errno);
+		}
+		fstream = fdopen(stream_socket, "r");
+	}
+	return fstream;
+}
+int Acq400::stream(short buf[], int maxbuf, enum Ports port)
+{
+	return fread(buf, sizeof(short), maxbuf, stream_open(port));
+}
+int Acq400::stream(long buf[],  int maxbuf, enum Ports port)
+{
+	return fread(buf, sizeof(long), maxbuf, stream_open(port));
+}
 
 }	// namespace acq400_chapi
