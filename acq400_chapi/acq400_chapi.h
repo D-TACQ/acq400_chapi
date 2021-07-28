@@ -79,6 +79,9 @@ public:
 	virtual int set(std::string* response, const std::string& site, const char* fmt, ...);
 	virtual int get(std::string* response, const std::string& site, const char* fmt, ...);
 
+	virtual int set(const std::string& site, const char* key, int value);
+	virtual int get(const std::string& site, const char* key, int& value);
+
 	virtual int stream(short buf[], int maxbuf, enum Ports port=STREAM);
 	virtual int stream(long buf[],  int maxbuf, enum Ports port=STREAM);
 };

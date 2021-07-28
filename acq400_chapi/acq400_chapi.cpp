@@ -145,14 +145,14 @@ Siteclient::Siteclient(const char* _addr, int _port) :
 
 int Siteclient::_sr(char* rx_message, int max_rx, const char* tx)
 {
-	if (trace) printf(">%s", tx);
+	if (trace) fprintf(stderr, ">%s", tx);
 	int rc = send(skt, tx, ::strlen(tx), 0);
 	if (rc != strlen(tx)){
 		error("send tried %d returned %d\n", strlen(tx), rc);
 	}
 	if (max_rx){
 		rc = receive_message(rx_message, max_rx, "(acq400.[0-9]+ ([0-9]+) >)");
-		if (trace) printf("<%s\n", rx_message);
+		if (trace) fprintf(stderr, "<%s\n", rx_message);
 	}else{
 		rc = 0;
 	}
@@ -230,6 +230,35 @@ int Acq400::get(std::string* response, const std::string& site, const char* fmt,
 	return rc;
 }
 
+int Acq400::set(const std::string& site, const char* key, int value)
+{
+	char lbuf[130];
+	char rx_message[16384];
+	Siteclient* sc = sites[site];
+
+	snprintf(lbuf, 130, "%s=%d\n", key, value);
+	if (sc == 0){
+		sites[site] = sc = new Siteclient(uut, 4220+atoi(site.c_str()));
+	}
+	int rc = sc->_sr(rx_message, 16384, lbuf);
+	return rc;
+}
+
+int Acq400::get(const std::string& site, const char* key, int& value)
+{
+	char rx_message[16384];
+	char lbuf[130];
+	Siteclient* sc = sites[site];
+	if (sc == 0){
+		sites[site] = sc = new Siteclient(uut, 4220+atoi(site.c_str()));
+	}
+	snprintf(lbuf, 130, "%s\n", key);
+	int rc = sc->_sr(rx_message, 16384, lbuf);
+	if (rc > 0){
+		return sscanf(rx_message, "%d", &value);
+	}
+	return rc;
+}
 FILE* Acq400::stream_open(enum Ports port)
 {
 	if (fstream == 0){

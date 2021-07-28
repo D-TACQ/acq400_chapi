@@ -19,6 +19,17 @@
 
 #define BUFLEN 0x10000
 
+template <class C>
+int streamer(acq400_chapi::Acq400& uut, acq400_chapi::Ports port)
+{
+	C* buf = new C[BUFLEN];
+	int nbuf;
+	while ((nbuf = uut.stream(buf, BUFLEN, port)) > 0){
+		fwrite(buf, sizeof(C), nbuf, stdout);
+	}
+	return 0;
+}
+
 int main(int argc, char **argv) {
 	if (argc < 2){
 		fprintf(stderr, "USAGE: acq400_stream UUT [PORT]\n");
@@ -28,12 +39,16 @@ int main(int argc, char **argv) {
 	acq400_chapi::Ports port = acq400_chapi::STREAM;
 
 	acq400_chapi::Acq400 uut(host);
-
-	short* buf = new short[BUFLEN];
-	int nbuf;
-	while ((nbuf = uut.stream(buf, BUFLEN, port)) > 0){
-		fwrite(buf, sizeof(short), nbuf, stdout);
+	int data32;
+	if (uut.get("0", "data32", data32) < 0){
+		fprintf(stderr, "ERROR:");
+		exit(1);
 	}
-	return 0;
+	if (data32){
+		return streamer<long>(uut, port);
+	}else{
+		return streamer<short>(uut, port);
+	}
+
 }
 
