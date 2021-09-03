@@ -259,7 +259,7 @@ int Acq400::get(const std::string& site, const char* key, int& value)
 	}
 	return rc;
 }
-FILE* Acq400::stream_open(enum Ports port)
+FILE* Acq400::stream_open(enum Ports port, const char* mode)
 {
 	if (fstream == 0){
 		int stream_socket = connect(uut, port);
@@ -267,7 +267,7 @@ FILE* Acq400::stream_open(enum Ports port)
 			perror("stream socket");
 			exit(errno);
 		}
-		fstream = fdopen(stream_socket, "r");
+		fstream = fdopen(stream_socket, mode);
 	}
 	return fstream;
 }
@@ -279,5 +279,15 @@ int Acq400::stream(long buf[],  int maxbuf, enum Ports port)
 {
 	return fread(buf, sizeof(long), maxbuf, stream_open(port));
 }
+
+int Acq400::stream_out(short buf[], int maxbuf, enum Ports port)
+{
+	return fwrite(buf, sizeof(short), maxbuf, stream_open(port, "w"));
+}
+int Acq400::stream_out(long buf[],  int maxbuf, enum Ports port)
+{
+	return fwrite(buf, sizeof(long), maxbuf, stream_open(port, "w"));
+}
+
 
 }	// namespace acq400_chapi

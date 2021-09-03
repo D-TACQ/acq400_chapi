@@ -1,11 +1,11 @@
 /*
- * acq400_stream.cpp
+ * acq400_stream_awg.cpp
  *
- *  Created on: 28 July 2021
+ *  Created on: 3 September 2021
  *
- *  acq400_stream UUT [port] | pv > mybigrawfile
+ *  cat awg_data_file | acq400_stream_awg UUT [port]
  *  streaming function stands in for
- *  nc UUT 4210 | pv > mybigrawfile
+ *  cat awg_data_file | nc UUT 54207
  *      Author: pgm
  */
 
@@ -24,19 +24,22 @@ int streamer(acq400_chapi::Acq400& uut, acq400_chapi::Ports port)
 {
 	C* buf = new C[BUFLEN];
 	int nbuf;
-	while ((nbuf = uut.stream(buf, BUFLEN, port)) > 0){
-		fwrite(buf, sizeof(C), nbuf, stdout);
+	while ((nbuf = fread(buf, sizeof(C), BUFLEN, stdout)) > 0){
+		uut.stream_out(buf, nbuf, port);
 	}
 	return 0;
 }
 
 int main(int argc, char **argv) {
 	if (argc < 2){
-		fprintf(stderr, "USAGE: acq400_stream UUT [PORT]\n");
+		fprintf(stderr, "USAGE: acq400_stream_awg UUT [PORT]\n");
 		exit(1);
 	}
 	const char* host = argv[1];
-	acq400_chapi::Ports port = acq400_chapi::STREAM;
+	acq400_chapi::Ports port = acq400_chapi::AWG_STREAM;
+	if (argc > 2){
+		acq400_chapi::Ports port = static_cast<acq400_chapi::Ports>(atoi(argv[2]));
+	}
 
 	acq400_chapi::Acq400 uut(host);
 	int data32;

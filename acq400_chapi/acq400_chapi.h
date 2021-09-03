@@ -71,7 +71,7 @@ class Acq400 {
 	const char* uut;
 
 	FILE *fstream;
-	FILE* stream_open(enum Ports port);
+	FILE* stream_open(enum Ports port, const char* mode = "r");
 public:
 	std::map<std::string, Siteclient*>sites;
 
@@ -85,6 +85,8 @@ public:
 
 	virtual int stream(short buf[], int maxbuf, enum Ports port=STREAM);
 	virtual int stream(long buf[],  int maxbuf, enum Ports port=STREAM);
+	virtual int stream_out(short buf[], int maxbuf, enum Ports port=AWG_STREAM);
+	virtual int stream_out(long buf[],  int maxbuf, enum Ports port=AWG_STREAM);
 };
 
 } 	// namespace acq400_chapi

@@ -43,3 +43,15 @@ TRANS_ACT:STATE_NOT_IDLE
 TRANS_ACT:TOTSAM
 ```
 
+ # Streaming .. emulates nc, use this as a base to build from
+
+```
+./acq400_stream UUT 4210 | pv > /dev/null
+```
+
+ # AWG Stream
+```
+while [ 1 ]; do cat DATAFILE; done | ./acq400_stream_awg UUT
+```
+
+

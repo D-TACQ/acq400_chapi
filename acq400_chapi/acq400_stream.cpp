@@ -37,6 +37,9 @@ int main(int argc, char **argv) {
 	}
 	const char* host = argv[1];
 	acq400_chapi::Ports port = acq400_chapi::STREAM;
+	if (argc > 2){
+		acq400_chapi::Ports port = static_cast<acq400_chapi::Ports>(atoi(argv[2]));
+	}
 
 	acq400_chapi::Acq400 uut(host);
 	int data32;
