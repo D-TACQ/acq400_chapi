@@ -24,7 +24,7 @@ int streamer(acq400_chapi::Acq400& uut, acq400_chapi::Ports port)
 {
 	C* buf = new C[BUFLEN];
 	int nbuf;
-	while ((nbuf = fread(buf, sizeof(C), BUFLEN, stdout)) > 0){
+	while ((nbuf = fread(buf, sizeof(C), BUFLEN, stdin)) > 0){
 		uut.stream_out(buf, nbuf, port);
 	}
 	return 0;
