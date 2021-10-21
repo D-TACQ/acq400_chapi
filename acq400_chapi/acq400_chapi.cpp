@@ -217,6 +217,9 @@ int Acq400::get(std::string* response, const std::string& site, const char* fmt,
 	vsnprintf (lbuf, 128, fmt, args);
 	va_end (args);
 	strcat(lbuf, "\n");
+	if (response){
+		response->clear();
+	}
 
 	Siteclient* sc = sites[site];
 	if (sc == 0){
