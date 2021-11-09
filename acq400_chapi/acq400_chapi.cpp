@@ -14,9 +14,10 @@
 
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
+//#include <sys/socket.h>
+#include <winsock2.h>
+//#include <netinet/in.h>
+//#include <netdb.h>
 #include <errno.h>
 
 // boost
@@ -54,10 +55,9 @@ static int connect(const char* addr, int port)
 		error("ERROR, no such host as %s\n", addr);
 	}
 
-	bzero((char *) &serveraddr, sizeof(serveraddr));
+	memset((char *) &serveraddr, 0, sizeof(serveraddr));
 	serveraddr.sin_family = AF_INET;
-	bcopy((char *)server->h_addr,
-			(char *)&serveraddr.sin_addr.s_addr, server->h_length);
+	memcpy((char *)&serveraddr.sin_addr.s_addr, (char *)server->h_addr, server->h_length);
 	serveraddr.sin_port = htons(port);
 
 	/* connect: create a connection with the server */

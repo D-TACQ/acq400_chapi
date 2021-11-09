@@ -5,6 +5,8 @@ CXXFLAGS+=-std=c++17
 
 CXXFLAGS+=-O2
 
+LDLIBS+=-lwsock32 -lws2_32
+
 all: lib apps
 
 lib: acq400_chapi.o 
