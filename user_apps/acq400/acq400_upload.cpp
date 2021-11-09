@@ -50,15 +50,10 @@ void ui(int argc, const char **argv) {
 }
 
 void init(acq400_chapi::Acq400& uut) {
-	/*
-	for (const auto& [key, value] : uut.sites) {
-		//std::cout << key << std::endl;
-		std::string model;
-		uut.get(&model, key, "MODEL");
-		std::cout << "s" << key << " MODEL:" << model << std::endl;
+	if (uut.get("0", "data32", G::data32) < 0){
+		fprintf(stderr, "ERROR:");
+		exit(1);
 	}
-	 */
-
 }
 
 /*
@@ -109,12 +104,22 @@ int upload(acq400_chapi::Acq400& uut, FILE* fout) {
 
 int upload(acq400_chapi::Acq400& uut)
 {
-	FILE* fout = fopen("rawdata.dat", "w");
-	if (G::data32){
-		return upload<long>(uut, fout);
-	}else{
-		return upload<short>(uut, fout);
+	int shot;
+	if (uut.get("1", "shot", shot) < 0){
+		fprintf(stderr, "ERROR:");
+		exit(1);
 	}
+	char fname[128];
+	snprintf(fname, 128, "%s.%04d.dat", G::uut, shot);
+	FILE* fout = fopen(fname, "w");
+	int rc;
+	if (G::data32){
+		rc = upload<long>(uut, fout);
+	}else{
+		rc = upload<short>(uut, fout);
+	}
+	printf("stored %d %s to %s\n", rc, G::data32? "int32": "int16", fname);
+	return rc;
 }
 
 int main(int argc, const char **argv) {
