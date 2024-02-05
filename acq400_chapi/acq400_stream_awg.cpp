@@ -20,19 +20,8 @@
 #include <string>
 #include <iostream>
 #include <bits/stdc++.h>
-
+#include "acq400_chapi_inc.h"
 #define BUFLEN 0x10000
-
-
-// https://stackoverflow.com/questions/275404/splitting-strings-in-c
-std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
-    std::stringstream ss(s);
-    std::string item;
-    while(std::getline(ss, item, delim)) {
-        elems.push_back(item);
-    }
-    return elems;
-}
 
 
 template <class C>

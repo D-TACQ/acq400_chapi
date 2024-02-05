@@ -19,14 +19,12 @@
 #include <netdb.h>
 #include <errno.h>
 
-// boost
-#include <bits/stdc++.h>
-#include <boost/algorithm/string.hpp>
 
 
 #include <regex>
 
 #include "acq400_chapi.h"
+#include "acq400_chapi_inc.h"
 
 namespace acq400_chapi {
 
@@ -178,7 +176,7 @@ Acq400::Acq400(const char* _uut): uut(_uut), fstream(0) {
 	sites["0"] = s0;
 
 	std::vector<std::string> sitelist;
-	boost::split(sitelist, _sitelist, boost::is_any_of(","));
+	split(_sitelist, ',', sitelist);
 	for (int i = 0; i < sitelist.size(); i++){
 		sites[sitelist[i]] = 0;	// lazy init
 	}
@@ -294,3 +292,14 @@ int Acq400::stream_out(long buf[],  int maxbuf, enum Ports port)
 
 
 }	// namespace acq400_chapi
+	
+// https://stackoverflow.com/questions/275404/splitting-strings-in-c
+std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
+    std::stringstream ss(s);
+    std::string item;
+    while(std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
+
