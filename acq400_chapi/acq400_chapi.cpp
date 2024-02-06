@@ -183,7 +183,7 @@ Acq400::Acq400(const char* _uut): uut(_uut), fstream(0) {
 };
 
 
-int Acq400::set(std::string* response, const std::string& site, const char* fmt, ...)
+int Acq400::set(std::string& response, const std::string& site, const char* fmt, ...)
 {
 	char lbuf[130];
 	char rx_message[16384];
@@ -194,18 +194,20 @@ int Acq400::set(std::string* response, const std::string& site, const char* fmt,
 	va_end (args);
 	strcat(lbuf, "\n");
 
+	//printf("Acq400::set site %s\n", site.c_str());
+
 	Siteclient* sc = sites[site];
 	if (sc == 0){
 		sites[site] = sc = new Siteclient(uut, 4220+atoi(site.c_str()));
 	}
 
 	int rc = sc->_sr(rx_message, 16384, lbuf);
-	if (rc > 0 && response){
-		response->append(rx_message);
+	if (rc > 0){
+		response.append(rx_message);
 	}
 	return rc;
 }
-int Acq400::get(std::string* response, const std::string& site, const char* fmt, ...)
+int Acq400::get(std::string& response, const std::string& site, const char* fmt, ...)
 {
 	char lbuf[130];
 	char rx_message[16384];
@@ -215,9 +217,10 @@ int Acq400::get(std::string* response, const std::string& site, const char* fmt,
 	vsnprintf (lbuf, 128, fmt, args);
 	va_end (args);
 	strcat(lbuf, "\n");
-	if (response){
-		response->clear();
-	}
+
+	response.clear();
+
+	//printf("Acq400::get site %s\n", site.c_str());
 
 	Siteclient* sc = sites[site];
 	if (sc == 0){
@@ -225,8 +228,8 @@ int Acq400::get(std::string* response, const std::string& site, const char* fmt,
 	}
 
 	int rc = sc->_sr(rx_message, 16384, lbuf);
-	if (rc > 0 && response){
-		response->append(rx_message);
+	if (rc > 0){
+		response.append(rx_message);
 	}
 	return rc;
 }
@@ -236,6 +239,9 @@ int Acq400::set(const std::string& site, const char* key, int value)
 	char lbuf[130];
 	char rx_message[16384];
 	Siteclient* sc = sites[site];
+
+
+
 
 	snprintf(lbuf, 130, "%s=%d\n", key, value);
 	if (sc == 0){

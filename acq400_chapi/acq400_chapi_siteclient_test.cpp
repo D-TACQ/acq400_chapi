@@ -9,6 +9,7 @@
 
 char rx_message[16384];
 
+
 int main(int argc, char **argv) {
 	if (argc < 3){
 		fprintf(stderr, "USAGE: acq400_chapi_siteclient_test UUT PORT [command]\n");
