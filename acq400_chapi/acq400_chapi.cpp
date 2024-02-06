@@ -240,9 +240,6 @@ int Acq400::set(const std::string& site, const char* key, int value)
 	char rx_message[16384];
 	Siteclient* sc = sites[site];
 
-
-
-
 	snprintf(lbuf, 130, "%s=%d\n", key, value);
 	if (sc == 0){
 		sites[site] = sc = new Siteclient(uut, 4220+atoi(site.c_str()));
