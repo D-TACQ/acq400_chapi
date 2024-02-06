@@ -30,17 +30,26 @@ The DI4 data is presented in every frame thus allowing full rate DI data to be s
 The LWord is split into 4 bytes aabbccdd and sent most significant byte first
 
  */
+
+
+#define STDOUT 1
+#define STDERR 2
+
 namespace G {
 	const char* uut;
 	int data32;
 	int debug;
+	char* outfile;
+	int fd_out;
 }
 
 struct poptOption opt_table[] = {
+	{ "output",     'o', POPT_ARG_STRING, &G::outfile, 'o' },
 	{ "debug",      'd', POPT_ARG_INT, &G::debug, 0   },
 	POPT_AUTOHELP
 	POPT_TABLEEND
 };
+
 
 
 void ui(int argc, const char **argv) {
@@ -48,13 +57,32 @@ void ui(int argc, const char **argv) {
 			poptGetContext(argv[0], argc, argv, opt_table, 0);
 	int rc;
 	while ( (rc = poptGetNextOpt( opt_context )) >= 0 ){
-		;
+		switch(rc){
+		case 'o':
+			printf("hello %s\n", G::outfile);
+			if (strcmp(G::outfile, "-") == 0){
+				G::fd_out = STDOUT;
+			}else{
+				FILE *fp = fopen(G::outfile, "w");
+				if (fp == 0){
+					perror(G::outfile);
+					exit(1);
+				}else{
+					G::fd_out = fileno(fp);
+				}
+			}
+			break;
+		default:
+			break;
+		}
 	}
+	/*
 	G::uut = poptGetArg(opt_context);
 	if (!G::uut){
 		fprintf(stderr, "ERROR: must provide uut\n");
 		exit(1);
 	}
+	*/
 }
 
 void init(acq400_chapi::Acq400& uut) {
@@ -68,6 +96,9 @@ typedef unsigned int u32;
 
 const int QUAD = 4;
 
+const int NDI = 4;
+const u32 DI_PREVIOUS_NONE = 0xffffffffU;
+
 class Sample {
 		const int nchan;
 
@@ -75,6 +106,10 @@ class Sample {
 			u32 sc;
 			u32 di;
 		} meta[QUAD];
+
+		u32 di_previous;
+
+		unsigned long long DISTATES[2][NDI];
 		u32* samples[QUAD];
 		struct iovec iov[QUAD];
 		struct iovec ov[QUAD*2];
@@ -84,10 +119,13 @@ class Sample {
 		int vscalls;
 		unsigned long long tot_samples;
 public:
-		Sample(const int _nchan): nchan(_nchan), i0(0),
+		Sample(const int _nchan): nchan(_nchan),
+		    di_previous(DI_PREVIOUS_NONE),
+			i0(0),
 			ssb((_nchan+1)*sizeof(u32)), vscalls(0), tot_samples(0) {
 
 			memset(meta, 0, sizeof(meta));
+			memset(DISTATES, 0, sizeof(DISTATES));
 
 			for (int ii = 0; ii < QUAD; ++ii){
 				samples[ii] = new u32[nchan+1];
@@ -99,14 +137,37 @@ public:
 				ov[ii*2+1].iov_len  = sizeof(struct Metadata);
 			}
 		}
+		void count_states(unsigned di4){
+			if (di_previous != DI_PREVIOUS_NONE){
+				u32 changed = di_previous^di4;
+				if (changed){
+					for (int ii = 0; ii < NDI; ++ii){
+						if (changed&(1<<ii)){
+							bool is_one = di4 | (1<<ii);
+							DISTATES[is_one][ii] += 1;
+						}
+					}
+
+				}
+			}
+			di_previous = di4;
+		}
+		void print_states(){
+			for (int ii = 0; ii < NDI; ++ii){
+				unsigned long long transitions = DISTATES[1][ii]+DISTATES[0][ii];
+				if (transitions){
+					fprintf(stderr, "DI:%d transitions %llu in %llu samples\n", ii, transitions, tot_samples);
+				}
+			}
+		}
 		int frame(u32 *smpl){
-			return smpl[32]&0x0000000f;
+			return smpl[nchan]&0x0000000f;
 		}
 		unsigned char scbyte(u32* smpl){
-			return smpl[32] >> 24;
+			return smpl[nchan] >> 24;
 		}
 		unsigned char di4(u32* smpl){
-			return (smpl[32] >> 4) & 0x0f;
+			return (smpl[nchan] >> 4) & 0x0f;
 		}
 		unsigned ch_id(u32 smpl1){
 			return smpl1&0x000000ff;
@@ -114,7 +175,7 @@ public:
 		bool valid_sample(u32* smpl){
 			return ch_id(smpl[ 0]) == 0x20 &&
 				   ch_id(smpl[ 1]) == 0x21 &&
-				   ch_id(smpl[31]) == 0x3f &&
+				   ch_id(smpl[nchan-1]) == 0x3f &&
 				   frame(smpl) >= 1 && frame(smpl) <= 4;
 		}
 		int decode(int nbytes){
@@ -150,12 +211,14 @@ public:
 				sc |= scbyte(samples[ic]) << shl;
 				//fprintf(stderr, "sc:%08x %d\n", sc, ic);
 			}
-			fprintf(stderr, "sc:%08x\n", sc);
+			if (G::debug) fprintf(stderr, "sc:%08x\n", sc);
 
 			for (int ic = 0; ic <= ii; ++ic){
 				meta[ic].sc = sc - (ii - ic);
 				meta[ic].di = di4(samples[ic]);
+				count_states(di4(samples[ic]));
 			}
+
 
 			int i2 = 0;
 			for (int i1=ii+1; i1 < QUAD; ++i1, ++i2){
@@ -167,11 +230,14 @@ public:
 		}
 		int read(int fd) {
 			int rc = readv(fd, iov+i0, QUAD-i0);
-			fprintf(stderr, "rc:%d\n", rc);
+			if (G::debug) fprintf(stderr, "rc:%d\n", rc);
 			if (rc > 0 && decode(rc) == 0){
-				fprintf(stderr, "call writev:%d\n", 2*(QUAD-i0));
-				return writev(1, ov, 2*(QUAD-i0));
-//				return 1;
+				if (G::debug) fprintf(stderr, "call writev:%d\n", 2*(QUAD-i0));
+				if (G::fd_out){
+					return writev(1, ov, 2*(QUAD-i0));
+				}else{
+					return 1;
+				}
 			}else{
 				return -1;
 			}
@@ -180,8 +246,10 @@ public:
 
 
 int main(int argc, const char **argv) {
+	ui(argc, argv);
 	Sample sample(32);
 	while(sample.read(0) > 0){
 		;
 	}
+	sample.print_states();
 }
