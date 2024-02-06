@@ -68,13 +68,13 @@ void capture(acq400_chapi::Acq400& uut) {
 
 	std::string rx(128, 'x');
 	std::string site("0");
-	uut.set(&rx, site, "transient POST=%d DEMUX=0", G::post);
-	uut.set(&rx, site, "set_arm %d", 1);
+	uut.set(rx, site, "transient POST=%d DEMUX=0", G::post);
+	uut.set(rx, site, "set_arm %d", 1);
 
 	bool first_time = true;
 	while (first_time || state == "TRANS_ACT:STATE IDLE"){
 		ostate = state;
-		uut.get(&state, site, "TRANS_ACT:STATE");
+		uut.get(state, site, "TRANS_ACT:STATE");
 		if (ostate != state){
 			printf("%s -> %s\n", ostate.c_str(), state.c_str());
 		}
@@ -83,7 +83,7 @@ void capture(acq400_chapi::Acq400& uut) {
 	}
 	while (state != "TRANS_ACT:STATE IDLE"){
 		ostate = state;
-		uut.get(&state, site, "TRANS_ACT:STATE");
+		uut.get(state, site, "TRANS_ACT:STATE");
 		if (ostate != state){
 			printf("%s -> %s\n", ostate.c_str(), state.c_str());
 		}
