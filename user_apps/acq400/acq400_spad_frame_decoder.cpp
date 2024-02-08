@@ -25,6 +25,9 @@ Frame	D31:24	D23:16	D15:18	D7:4	D3 (Subframe)
 The DI4 data is presented in every frame thus allowing full rate DI data to be sent, only the Sample Count and the two SEW LWords need to be assembled as follows
 The LWord is split into 4 bytes aabbccdd and sent most significant byte first
 
+SEW1 SEW2 : "Software Embedded Word 1 and 2" :: 2 32 bit quantities that can be injected by embedded software. The values are embedded in the
+data in sync with the sample. Example uses include: embedding time of day and/or position (perhaps from a GPS), or heading/pitch/roll from an IMU.
+
 Example usage:
 
 System: ACQ1001Q+ACQ465-32. This system is just able to stream 33 x u32 at full rate 374 kHz on TCP/IP
@@ -153,6 +156,7 @@ Check on the DI rate: 275 cycles in 30s, ~ 10Hz  10.3e6 samples in 30s => ~350kH
 
 Now we can dump the inflated data:
 
+```
 peter@naboo:~/PROJECTS/acq400_chapi/user_apps/acq400$ cat /tmp/thirty_second.inflated37 |
 	hexdump -e '37/4 "%08x," "\n"' | cut -d, -f1-4,32- | head
 fffff820,ffffd621,fffef222,ffffc023,fffff13f,00122b01,00000001,00345678,00ad1dea,00000000,
@@ -177,7 +181,27 @@ ffff8520,ffffea21,fffebe22,ffff5623,ffffdc3f,00122b81,009cc4a0,12345678,2bad1dea
 ffffc020,ffff7921,fffef322,ffffd423,fffff93f,9c34ad82,009cc4a1,12345678,2bad1dea,00000008,
 ffffdb20,ffff9221,fffea722,ffffaa23,00007b3f,c4561d83,009cc4a2,12345678,2bad1dea,00000008,
 ffffd020,ffffda21,fffec822,ffff9023,fffffd3f,a378ea84,009cc4a3,12345678,2bad1dea,00000008,
+```
 
+Run a 3600s shot:
+```
+peter@naboo:~/PROJECTS/acq400_chapi/user_apps/acq400$ (timeout -s2 3600  nc acq1001_301 4210) | pv | ./acq400_spad_frame_decoder
+30.6GiB 0:11:07 [46.5MiB/s]
+30.6GiB 0:11:08 [47.4MiB/s]
+45.6GiB 0:16:34 [47.2MiB/s]
+69.0GiB 0:25:02 [47.6MiB/s]
+77.0GiB 0:27:58 [50.0MiB/s]
+87.8GiB 0:31:52 [47.4MiB/s]
+ 162GiB 0:58:48 [52.1MiB/s]
+ 165GiB 1:00:00 [44.5MiB/s]
+got one:2
+
+DI:3 transitions 71954 in 1345411066 samples
+
+Manual:
+35977 DI cycles in 3600s => 10Hz
+1.345e9 samples in 3600s => 376 kHz
+```
  */
 
 
