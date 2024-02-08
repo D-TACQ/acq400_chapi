@@ -5,7 +5,21 @@
 *** NB: this is still very skeletal ***
 
 
-sudo dnf install boost-devel
+# boost is no longer needed
+#sudo dnf install boost-devel
+# we do need popt
+## ubuntu
+sudo apt-get install libpopt-dev
+
+# Install recommendation:
+# works on all known Linux including WSL
+# native Windows port would need a socket abstraction layer
+```bash
+mkdir PROJECTS
+cd PROJECTS; git clone https://D-TACQ/acq400_chapi
+cd acq400_chapi
+make
+```
 
 
  # Example

@@ -184,7 +184,7 @@ public:
 			for (ii = i0; ii < QUAD; ++ii, last_frame = frm){
 				++vscalls;
 				if (!valid_sample(samples[ii])){
-					write(1, samples[ii], ssb);
+					int ignore = write(1, samples[ii], ssb);
 					fprintf(stderr, "ERROR: not a valid sample at %d\n", vscalls);
 					exit(1);
 				}else{
