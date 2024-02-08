@@ -1,0 +1,4 @@
+RAW:
+hexdump -e '33/4 "%08x," "\n"' <bigrawfile | cut -d, -f1-4,32- | more
+COOKED:
+./acq400_spad_frame_decoder < bigrawfile  |hexdump -e '35/4 "%08x," "\n"' | cut -d, -f1-4,32- | more
