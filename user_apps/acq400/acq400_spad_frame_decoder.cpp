@@ -41,9 +41,11 @@ namespace G {
 	int debug;
 	char* outfile;
 	int fd_out;
+	int nchan = 32;
 }
 
 struct poptOption opt_table[] = {
+	{ "nchan",      'n', POPT_ARG_INT, &G::nchan, 0   },
 	{ "output",     'o', POPT_ARG_STRING, &G::outfile, 'o' },
 	{ "debug",      'd', POPT_ARG_INT, &G::debug, 0   },
 	POPT_AUTOHELP
@@ -99,7 +101,7 @@ const int QUAD = 4;
 const int NDI = 4;
 const u32 DI_PREVIOUS_NONE = 0xffffffffU;
 
-class Sample {
+template <int NCOL> class Sample {
 		const int nchan;
 
 		struct Metadata {
@@ -110,8 +112,7 @@ class Sample {
 		u32 di_previous;
 
 		unsigned long long DISTATES[2][NDI];
-		u32* samples[QUAD];
-		struct iovec iov[QUAD];
+		u32 samples[QUAD][NCOL];
 		struct iovec ov[QUAD*2];
 		int i0;
 
@@ -128,9 +129,6 @@ public:
 			memset(DISTATES, 0, sizeof(DISTATES));
 
 			for (int ii = 0; ii < QUAD; ++ii){
-				samples[ii] = new u32[nchan+1];
-				iov[ii].iov_base = samples[ii];
-				iov[ii].iov_len  = ssb;
 				ov[ii*2].iov_base = samples[ii];
 				ov[ii*2].iov_len  = ssb;
 				ov[ii*2+1].iov_base = &meta[ii];
@@ -228,8 +226,8 @@ public:
 
 			return 0;
 		}
-		int read(int fd) {
-			int rc = readv(fd, iov+i0, QUAD-i0);
+		int read(FILE* fp) {
+			int rc = fread(&samples[i0], sizeof(u32)*NCOL, QUAD-i0, fp);
 			if (G::debug) fprintf(stderr, "rc:%d\n", rc);
 			if (rc > 0 && decode(rc) == 0){
 				if (G::debug) fprintf(stderr, "call writev:%d\n", 2*(QUAD-i0));
@@ -242,14 +240,27 @@ public:
 				return -1;
 			}
 		}
+		void run(FILE* fp){
+			while(read(fp) > 0){
+				;
+			}
+			print_states();
+		}
 };
+
 
 
 int main(int argc, const char **argv) {
 	ui(argc, argv);
-	Sample sample(32);
-	while(sample.read(0) > 0){
-		;
+
+	switch (G::nchan){
+	case 16:
+		(new Sample<16+1>(G::nchan))->run(stdin); break;
+	case 32:
+		(new Sample<32+1>(G::nchan))->run(stdin); break;
+	case 64:
+		(new Sample<64+1>(G::nchan))->run(stdin); break;
+	default:
+		fprintf(stderr, "ERROR, sorry nchan=%d not supported\n", G::nchan);
 	}
-	sample.print_states();
 }
