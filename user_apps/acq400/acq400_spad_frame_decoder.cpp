@@ -1,10 +1,137 @@
 /*
- * acq400_upload.cpp
+ * acq400_spad_frame_decoder.cpp
  *
  *  Created on: 21 Oct 2021
  *      Author: pgm
  */
 
+
+
+
+/*
+SPAD_FRAME is a feature that adds a low overhead instrumentation frame to a sample data set.
+
+acq400_spad_frame_decoder:
+1. accepts a stream of SPAD_FRAMEs as input.
+2. validates the frames, STOPS on ERROR.
+3. counts state changes in the DI4 field and prints it out at the end of the run.
+4. outputs an expanded data set that may be easier to log (so that clients do NOT need to know the full detail of the SPAD_FRAME
+
+For reference, here is a detailed description of SPAD_FRAME.
+The SPAD_FRAME is single u32 column to a sample to include additional data:
+
+ * If SPAD_FRAME is set to 1 then a single LWord is appended to every sample in the data stream and the data is recovered over multiple data Samples as follows | Sample Count | SEW2 | SEW1 | DI4 | FrameID
+
+Frame	D31:24	D23:16	D15:18	D7:4	D3 (Subframe)
+0		SCaa	SEW2aa	SEW1aa	DI4		1
+1		SCbb	SEW2bb	SEW1bb	DI4		2
+2		SCcc	SEW2cc	SEW1cc	DI4		3
+3		SCdd	SEW2dd	SEW1dd	DI4		4
+The DI4 data is presented in every frame thus allowing full rate DI data to be sent, only the Sample Count and the two SEW LWords need to be assembled as follows
+The LWord is split into 4 bytes aabbccdd and sent most significant byte first
+
+Example usage:
+
+System: ACQ1001Q+ACQ465-32. This system is just able to stream 33 x u32 at full rate 374 kHz on TCP/IP
+
+To configure the spad frame:
+```
+cat /mnt/local/sysconfig/transient.init
+...
+set.site 0 spad=2,0,0         # SPAD-FRAME
+run0 1
+
+acq1001_301> get.site 0 NCHAN # system has 33 logical channels.
+33
+
+In our system, we inject a logic waveform 10Hz into the DI on the TERM10/HDMI.
+
+
+Data Format:
+
+Each channel has a unique id, 0x???????20, 0x??????21 .. 0x??????3f
+```
+pgm@hoy6:~/PROJECTS/acq400_chapi/user_apps/acq400$ hexdump -e '8/4 "%08x," "\n"' <bigrawfile | head -n 5
+ffffc120,00000d21,fffef122,00000b23,ffffd824,0000af25,00005226,ffffde27,    CH01 .. CH08
+ffff7528,ffff9929,0000c62a,ffffbd2b,ffff7e2c,ffffb62d,fffed32e,ffffb62f,    CH09 .. CH16
+ffffaf30,ffff9031,ffff6032,fffffa33,ffff8c34,00012535,ffffee36,00007537,    CH17 .. CH24
+00004138,ffff8539,fffeeb3a,0000433b,00004b3c,ffff323d,fffff83e,fffff63f,    CH25 .. CH32
+00112202,                                                                   SPAD_FRAME
+```
+
+Dump two full SPAD_FRAMEs, we cut some data channels to make it fit the page:
+```
+pgm@hoy6:~/PROJECTS/acq400_chapi/user_apps/acq400$ hexdump -e '33/4 "%08x," "\n"' <bigrawfile | grep -n . | tr : , | cut -d, -f1,2-4,29- | head
+1,ffffc120,00000d21,fffef122,0000433b,00004b3c,ffff323d,fffff83e,fffff63f,00112202,    # first sample in set ALWAYS starts at subframe 2
+2,ffffb320,00000521,fffef722,0000413b,0000493c,ffff2d3d,fffff53e,ffffe93f,00112203,
+3,ffffc320,00000a21,fffee922,0000373b,0000533c,ffff2c3d,ffffff3e,ffffed3f,03112204,    # first sample count is 3: correct!
+4,ffffbb20,00000c21,fffee522,0000473b,00004f3c,ffff353d,0000023e,ffffe63f,00112201,    # Subframe 1
+5,ffffb420,00000921,fffeec22,0000403b,0000493c,ffff3c3d,0000073e,fffff13f,00112202,	   # Subframe 2
+6,ffffbd20,00000621,fffef222,0000323b,0000533c,ffff423d,fffff93e,fffff23f,00112203,    # Subframe 3
+7,ffffb720,00000721,fffeec22,0000423b,0000553c,ffff393d,fffffe3e,fffff03f,07112204,    # Subframe 4 seventh sample is 7: correct
+8,ffffbc20,00001021,fffee822,0000413b,0000533c,ffff283d,0000023e,fffff23f,00112201,    # Subframe 1 .. repeat
+```
+
+Optional output to an inflated frame.
+The inflated frame decodes the SPAD FRAME so that the user does not have to, and presents the data in a handy one-column per item format.
+It also computes the actual sample number for EVERY sample.
+SEW1 and SEW2 are a useful opportunity to inject some information into the frame.
+Here it's a static number, but it could be dynamic eg time_t or GPS NMEA or similar.
+
+set.site 0 spad1 0x12345678    # inject SEW1
+set.site 0 spad2 0x2bad1dea    # inject SEW2
+
+result
+```
+nc acq1001_301 4210 | pv | ./acq400_spad_frame_decoder  -o - | hexdump -e '37/4 "%08x," "\n"' | cut -d, -f1-4,32- | head
+ffffee20,ffffe521,ffff2822,ffffe823,0000473f,00122b81,00000001,00345678,00ad1dea,00000008,                                                                                                                                                        ]
+ffffea20,ffffe621,ffff2b22,ffffea23,0000433f,00561d83,00000002,00345678,00ad1dea,00000008,
+ffffea20,ffffe721,ffff2622,ffffe623,0000433f,0378ea84,00000003,00345678,00ad1dea,00000008,
+ffffee20,ffffe521,ffff2822,ffffe823,0000473f,00122b81,00000004,12345678,2bad1dea,00000008,
+ffffea20,ffffe221,ffff3322,ffffeb23,0000483f,0034ad82,00000005,12345678,2bad1dea,00000008,
+ffffec20,ffffe121,ffff2c22,ffffec23,00004e3f,00561d83,00000006,12345678,2bad1dea,00000008,
+ffffea20,ffffe621,ffff2a22,ffffee23,0000493f,0778ea84,00000007,12345678,2bad1dea,00000008,
+ffffe620,ffffe021,ffff2e22,fffff223,0000433f,00122b81,00000008,12345678,2bad1dea,00000008,
+ffffe820,ffffde21,ffff2d22,ffffef23,0000483f,0034ad82,00000009,12345678,2bad1dea,00000008,
+ffffe420,ffffe421,ffff3122,ffffea23,00004d3f,00561d83,0000000a,12345678,2bad1dea,00000008,
+
+```
+
+Run for a period. Here we run for 30s, dumping the inflated data in real time.
+It's probably best to slow the capture right down for this test:
+
+```
+set.site 0 sync_role master 10k               # slowest recommended operation rate.
+
+(timeout -s2 30  nc acq1001_301 4210) |       # run for 30 s
+pv |                                          # give capture status a ~1Hz
+./acq400_spad_frame_decoder  -o - |           # decode the data and inflate the frame
+hexdump -e '37/4 "%08x," "\n"' |              # dump 37 columns of data
+cut -d, -f1-4,32-                             # limit the number of columns to fit the screen.
+
+ffffe920,fffff621,ffff1f22,ffffed23,00004b3f,00122b81,00000001,00345678,00ad1dea,00000008,                                                                                                                                                        ]
+ffffe920,fffff221,ffff2422,ffffeb23,00003f3f,00561d83,00000002,00345678,00ad1dea,00000008,
+ffffdc20,fffff721,ffff2922,ffffef23,0000443f,0378ea84,00000003,00345678,00ad1dea,00000008,
+ffffe920,fffff621,ffff1f22,ffffed23,00004b3f,00122b81,00000004,12345678,2bad1dea,00000008,
+ffffea20,ffffe921,ffff2022,fffff223,0000493f,0034ad82,00000005,12345678,2bad1dea,00000008,
+ffffe920,fffff221,ffff2022,ffffe923,0000433f,00561d83,00000006,12345678,2bad1dea,00000008,
+ffffee20,fffff721,ffff2c22,ffffe723,0000473f,0778ea84,00000007,12345678,2bad1dea,00000008,
+fffff420,ffffef21,ffff2d22,ffffee23,0000533f,00122b81,00000008,12345678,2bad1dea,00000008,
+
+...
+ffffef20,ffffe821,ffff2122,ffffee23,0000303f,eb78ea84,0003efeb,12345678,2bad1dea,00000008,
+ffffea20,ffffea21,ffff2622,ffffe723,00003b3f,00122b81,0003efec,12345678,2bad1dea,00000008,
+ffffdd20,ffffdf21,ffff2322,ffffe623,00003c3f,0334ad82,0003efed,12345678,2bad1dea,00000008,
+ffffe620,ffffdf21,ffff1b22,ffffdb23,0000373f,ef561d83,0003efee,12345678,2bad1dea,00000008,
+ffffea20,ffffe521,ffff2422,ffffd123,00003d3f,ef78ea84,0003efef,12345678,2bad1dea,00000008,
+ffffea20,ffffdd21,ffff2322,ffffdd23,0000403f,00122b81,0003eff0,12345678,2bad1dea,00000008,
+ffffed20,ffffe321,ffff2822,ffffe423,0000343f,0334ad82,0003eff1,12345678,2bad1dea,00000008,
+ffffe920,ffffe921,ffff2b22,ffffdf23,0000313f,ef561d83,0003eff2,12345678,2bad1dea,00000008,
+ffffe920,ffffe621,ffff2622,ffffe123,0000353f,f378ea84,0003eff3,12345678,2bad1dea,00000008,
+
+
+DI:3 transitions 516 in 258050 samples
+ */
 
 #include <stdio.h>
 #include <unistd.h>
@@ -18,18 +145,9 @@
 #include <sys/uio.h>
 #define BUFLEN 0x10000
 
-/*
- * If SPAD_FRAME is set to 1 then a single LWord is appended to every sample in the data stream and the data is recovered over multiple data Samples as follows | Sample Count | SEW2 | SEW1 | DI4 | FrameID
-
-Frame	D31:24	D23:16	D15:18	D7:4	D3:0
-0	SCaa	SEW2aa	SEW1aa	DI4	1
-1	SCbb	SEW2bb	SEW1bb	DI4	2
-2	SCcc	SEW2cc	SEW1cc	DI4	3
-3	SCdd	SEW2dd	SEW1dd	DI4	4
-The DI4 data is presented in every frame thus allowing full rate DI data to be sent, only the Sample Count and the two SEW LWords need to be assembled as follows
-The LWord is split into 4 bytes aabbccdd and sent most significant byte first
-
- */
+#include <errno.h>
+#include <signal.h>
+#include <time.h>
 
 
 #define STDOUT 1
@@ -106,6 +224,8 @@ template <int NCOL> class Sample {
 
 		struct Metadata {
 			u32 sc;
+			u32 sew1;
+			u32 sew2;
 			u32 di;
 		} meta[QUAD];
 
@@ -152,12 +272,18 @@ public:
 		}
 		void print_states(){
 			for (int ii = 0; ii < NDI; ++ii){
-				unsigned long long transitions = DISTATES[1][ii]+DISTATES[0][ii];
+				unsigned long long transitions = (DISTATES[1][ii]+DISTATES[0][ii]);
 				if (transitions){
 					fprintf(stderr, "DI:%d transitions %llu in %llu samples\n", ii, transitions, tot_samples);
 				}
 			}
 		}
+
+		/* apply to data channels 1..N */
+		unsigned ch_id(u32 smpl1){
+					return smpl1&0x000000ff;
+		}
+		/* apply to SPAD_FRAME word only */
 		int frame(u32 *smpl){
 			return smpl[nchan]&0x0000000f;
 		}
@@ -167,9 +293,13 @@ public:
 		unsigned char di4(u32* smpl){
 			return (smpl[nchan] >> 4) & 0x0f;
 		}
-		unsigned ch_id(u32 smpl1){
-			return smpl1&0x000000ff;
+		unsigned sew1(u32* smpl1){
+			return (smpl1[nchan]&0x00ff0000) >> 16;
 		}
+		unsigned sew2(u32* smpl1){
+			return (smpl1[nchan]&0x0000ff00) >> 8;
+		}
+
 		bool valid_sample(u32* smpl){
 			return ch_id(smpl[ 0]) == 0x20 &&
 				   ch_id(smpl[ 1]) == 0x21 &&
@@ -205,19 +335,30 @@ public:
 				exit(1);
 			}
 			u32 sc = 0;
-			for (int ic = ii, shl=0; ic; --ic, shl+=8){
+
+			unsigned _sew1 = 0, _sew2 = 0;
+
+			for (int ic = ii, shl=0; ic>=0; --ic, shl+=8){
 				sc |= scbyte(samples[ic]) << shl;
+				_sew1 |= sew1(samples[ic]) << shl;
+				_sew2 |= sew2(samples[ic]) << shl;
 				//fprintf(stderr, "sc:%08x %d\n", sc, ic);
 			}
 			if (G::debug) fprintf(stderr, "sc:%08x\n", sc);
 
+
 			for (int ic = 0; ic <= ii; ++ic){
 				meta[ic].sc = sc - (ii - ic);
+				meta[ic].sew1 = _sew1;
+				meta[ic].sew2 = _sew2;
 				meta[ic].di = di4(samples[ic]);
+				/* additional debug */ /*
+				meta[ic].di = frame(samples[ic])<<24 | ii<<16 | di4(samples[ic]);
+				*/
 				count_states(di4(samples[ic]));
 			}
 
-
+			/* we may have residue subframes, shuffle to the top for next time, setting i0 as the start point */
 			int i2 = 0;
 			for (int i1=ii+1; i1 < QUAD; ++i1, ++i2){
 				memcpy(samples[i2], samples[i1], ssb);
@@ -248,10 +389,15 @@ public:
 		}
 };
 
-
+void catch_int(int sig_num)
+{
+	fprintf(stderr, "got one:%d\n\n", sig_num);
+}
 
 int main(int argc, const char **argv) {
 	ui(argc, argv);
+	signal(SIGINT, catch_int);
+	signal(SIGPIPE, catch_int);
 
 	switch (G::nchan){
 	case 16:
