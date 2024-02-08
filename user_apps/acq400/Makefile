@@ -13,4 +13,4 @@ apps: $(APPS)
 
 
 clean:
-	rm $(APPS)
+	rm -f $(APPS)
