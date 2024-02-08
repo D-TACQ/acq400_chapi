@@ -1,14 +1,9 @@
 /*
  * acq400_spad_frame_decoder.cpp
  *
- *  Created on: 21 Oct 2021
+ *  Created on: 5 Feb 2024
  *      Author: pgm
- */
 
-
-
-
-/*
 SPAD_FRAME is a feature that adds a low overhead instrumentation frame to a sample data set.
 
 acq400_spad_frame_decoder:
@@ -18,7 +13,7 @@ acq400_spad_frame_decoder:
 4. outputs an expanded data set that may be easier to log (so that clients do NOT need to know the full detail of the SPAD_FRAME
 
 For reference, here is a detailed description of SPAD_FRAME.
-The SPAD_FRAME is single u32 column to a sample to include additional data:
+The SPAD_FRAME is single u32 column at the end of every sample to include additional data:
 
  * If SPAD_FRAME is set to 1 then a single LWord is appended to every sample in the data stream and the data is recovered over multiple data Samples as follows | Sample Count | SEW2 | SEW1 | DI4 | FrameID
 
@@ -49,6 +44,7 @@ In our system, we inject a logic waveform 10Hz into the DI on the TERM10/HDMI.
 
 Data Format:
 
+Showing ONE Full Sample:
 Each channel has a unique id, 0x???????20, 0x??????21 .. 0x??????3f
 ```
 pgm@hoy6:~/PROJECTS/acq400_chapi/user_apps/acq400$ hexdump -e '8/4 "%08x," "\n"' <bigrawfile | head -n 5
@@ -128,10 +124,63 @@ ffffea20,ffffdd21,ffff2322,ffffdd23,0000403f,00122b81,0003eff0,12345678,2bad1dea
 ffffed20,ffffe321,ffff2822,ffffe423,0000343f,0334ad82,0003eff1,12345678,2bad1dea,00000008,
 ffffe920,ffffe921,ffff2b22,ffffdf23,0000313f,ef561d83,0003eff2,12345678,2bad1dea,00000008,
 ffffe920,ffffe621,ffff2622,ffffe123,0000353f,f378ea84,0003eff3,12345678,2bad1dea,00000008,
-
-
+```
+DI Monitor:
+acq400_spad_frame_decoder counts DI edges and publishes the result at the end:
+```
 DI:3 transitions 516 in 258050 samples
+```
+
+Translation: We have a 10Hz waveform, 512 transitions, two transitions per cycle. So, ~258 transitions in 258000 samples,
+the ADC sample rate is 10k, the waveform is 10Hz, we have 1000x more samples than DI transitions. It looks about right..
+
+Run a 30s shot at full rate, with validation and DI count at the end.
+
+** DO NOT TRY to hexdump the data at high rates!
+
+```
+peter@naboo:~/PROJECTS/acq400_chapi/user_apps/acq400$ (timeout -s2 30  nc acq1001_301 4210) | pv |
+./acq400_spad_frame_decoder -o - > /tmp/thirty_second.inflated37
+ 207MiB 0:00:07 [45.4MiB/s]
+ 447MiB 0:00:12 [47.3MiB/s]
+ 730MiB 0:00:18 [47.5MiB/s]
+got one:2:00:29 [47.0MiB/s]
+1.26GiB 0:00:30 [45.1MiB/s]
+DI:3 transitions 549 in 10273954 samples
+```
+
+Check on the DI rate: 275 cycles in 30s, ~ 10Hz  10.3e6 samples in 30s => ~350kHz (it's not exactly 30s, there's some 3s delay at startyup)
+
+Now we can dump the inflated data:
+
+peter@naboo:~/PROJECTS/acq400_chapi/user_apps/acq400$ cat /tmp/thirty_second.inflated37 |
+	hexdump -e '37/4 "%08x," "\n"' | cut -d, -f1-4,32- | head
+fffff820,ffffd621,fffef222,ffffc023,fffff13f,00122b01,00000001,00345678,00ad1dea,00000000,
+ffffe120,ffffa021,fffeec22,ffffa323,00001c3f,00561d03,00000002,00345678,00ad1dea,00000000,
+ffff8d20,ffffbf21,ffff0322,ffffcc23,0000093f,0378ea04,00000003,00345678,00ad1dea,00000000,
+fffff820,ffffd621,fffef222,ffffc023,fffff13f,00122b01,00000004,12345678,2bad1dea,00000000,
+ffff9320,ffffb621,fffee222,ffffb023,00006a3f,0034ad02,00000005,12345678,2bad1dea,00000000,
+ffff8f20,ffffae21,fffeec22,ffffb923,00006c3f,00561d03,00000006,12345678,2bad1dea,00000000,
+00000920,ffffa021,ffff1e22,ffff8923,fffffd3f,0778ea04,00000007,12345678,2bad1dea,00000000,
+ffffd720,ffffe821,ffff1422,ffffa223,0000023f,00122b01,00000008,12345678,2bad1dea,00000000,
+ffffa720,fffffc21,fffef022,ffffd423,00002d3f,0034ad02,00000009,12345678,2bad1dea,00000000,
+ffffb320,ffffaa21,ffff0f22,ffff9e23,ffffd73f,00561d03,0000000a,12345678,2bad1dea,00000000,
+...
+peter@naboo:~/PROJECTS/acq400_chapi/user_apps/acq400$ cat /tmp/thirty_second.inflated37 |
+	hexdump -e '37/4 "%08x," "\n"' | cut -d, -f1-4,32- | tail
+ffffd120,ffffca21,ffff0f22,ffffd523,0000243f,9b78ea84,009cc49b,12345678,2bad1dea,00000008,
+ffffb520,ffff8721,fffef422,ffffd923,0000413f,00122b81,009cc49c,12345678,2bad1dea,00000008,
+ffffb020,ffff8421,fffeba22,ffff5623,fffffd3f,9c34ad82,009cc49d,12345678,2bad1dea,00000008,
+ffffa720,ffffae21,ffff0f22,ffffd123,ffffeb3f,c4561d83,009cc49e,12345678,2bad1dea,00000008,
+ffff9520,ffffa521,fffeb822,ffffa723,0000533f,9f78ea84,009cc49f,12345678,2bad1dea,00000008,
+ffff8520,ffffea21,fffebe22,ffff5623,ffffdc3f,00122b81,009cc4a0,12345678,2bad1dea,00000008,
+ffffc020,ffff7921,fffef322,ffffd423,fffff93f,9c34ad82,009cc4a1,12345678,2bad1dea,00000008,
+ffffdb20,ffff9221,fffea722,ffffaa23,00007b3f,c4561d83,009cc4a2,12345678,2bad1dea,00000008,
+ffffd020,ffffda21,fffec822,ffff9023,fffffd3f,a378ea84,009cc4a3,12345678,2bad1dea,00000008,
+
  */
+
+
 
 #include <stdio.h>
 #include <unistd.h>
