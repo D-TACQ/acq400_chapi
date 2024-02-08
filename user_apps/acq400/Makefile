@@ -3,7 +3,7 @@ CXXFLAGS+=-std=c++17
 CXXFLAGS+=-O2
 
 CXXFLAGS+=-I../../acq400_chapi
-LDFLAGS+=../../acq400_chapi/acq400_chapi.o -lpopt
+LDLIBS+=../../acq400_chapi/acq400_chapi.o -lpopt
 
 all: apps
 
