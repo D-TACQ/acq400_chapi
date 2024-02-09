@@ -373,10 +373,13 @@ public:
 			return (smpl1[nchan]&0x0000ff00) >> 8;
 		}
 
+		unsigned ch_id(int ii){
+			return 0x20+ii;
+		}
 		bool valid_sample(u32* smpl){
-			return ch_id(smpl[ 0]) == 0x20 &&
-				   ch_id(smpl[ 1]) == 0x21 &&
-				   ch_id(smpl[nchan-1]) == 0x3f &&
+			return ch_id(smpl[ 0]) == ch_id(0) &&
+				   ch_id(smpl[ 1]) == ch_id(1) &&
+				   ch_id(smpl[nchan-1]) == ch_id(nchan-1) &&
 				   frame(smpl) >= 1 && frame(smpl) <= 4;
 		}
 		int decode(int nbytes){
