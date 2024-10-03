@@ -202,6 +202,25 @@ Manual:
 35977 DI cycles in 3600s => 10Hz
 1.345e9 samples in 3600s => 376 kHz
 ```
+
+Testing multiple inputs:
+10Hz -> CH01 on TERM05 -> DI3
+10kHz -> CH04 on TERM05 -> DI0
+
+result
+```
+peter@naboo:~/PROJECTS/acq400_chapi/user_apps/acq400$ timeout -s2 60 nc acq1001_301 4210 | pv  | ./acq400_spad_frame_decoder --nchan 16 | hexdump -e '21/4 "%08x," "\n"' | cut -d, -f16-
+got one:2:00:59 [24.5MiB/s] [                                                                                                                                       <=>                      ]
+
+1.37GiB 0:01:00 [24.0MiB/s] [                                                                                                                                   <=>                          ]
+DI:0 transitions 1154873 in 21593850 samples
+DI:3 transitions 1155 in 21593850 samples
+```
+
+=> It's easy to see that DI:0 is 1000x faster than DI:3 was
+Actual rates:
+1154873/2/21593850 * 374kHz = 10.00kHz
+   1155/2/21593850 * 374kHz = 10Hz
  */
 
 
