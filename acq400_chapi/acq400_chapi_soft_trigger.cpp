@@ -6,6 +6,14 @@
 #include <iostream>
 #include <bits/stdc++.h>
 
+/* soft trigger example:
+ *
+pgm@hoy6:~/PROJECTS/acq400_chapi/acq400_chapi$ ./acq400_chapi_soft_trigger acq2106_133 4220 soft_trigger=1 SIG:TRG_MB:COUNT
+connect to acq2106_133:4220
+result SIG:TRG_MB:COUNT 8
+
+*/
+
 
 char rx_message[16384];
 
@@ -24,8 +32,9 @@ int main(int argc, char **argv) {
 			int rc = site.sr(rx_message, 16384, argv[ic]);
 			if (rc > 0){
 				printf("result %s\n", rx_message);
-			}else{
+			}else if (rc < 0){
 				fprintf(stderr, "ERROR: sr returned %d\n", rc);
+				return rc;
 			}
 		}
 	}else{
