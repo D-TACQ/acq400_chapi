@@ -24,7 +24,7 @@ enum SetGet decode(std::string &site, std::string &keyval, const char* user_comm
 	char mode[4];			// set or get
 	char scode[3];
 
-	if (sscanf(user_command, "%3s.site %2s %1024[^\n]", mode, &scode, the_command) == 3){
+	if (sscanf(user_command, "%3s.site %2s %1024[^\n]", mode, scode, the_command) == 3){
 		printf("success: \"%s\" \"%s\" \"%s\"\n", mode, scode, the_command);
 		site = std::string(scode);
 		keyval = std::string(the_command);
