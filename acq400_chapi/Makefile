@@ -29,3 +29,8 @@ acq400_chapi.o: acq400_chapi.cpp
 
 clean:
 	rm -f  $(APPS) *.o
+
+install_user: apps
+	cp $(APPS) $(HOME)/bin
+
+
