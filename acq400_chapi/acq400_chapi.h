@@ -71,7 +71,9 @@ class Acq400 {
 	const char* uut;
 
 	FILE *fstream;
-	FILE* stream_open(enum Ports port, const char* mode = "r");
+	FILE* stream_open(enum Ports port, const char* mode);
+	int skt;
+	int stream_open(enum Ports port);
 public:
 	std::map<std::string, Siteclient*>sites;
 

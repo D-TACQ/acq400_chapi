@@ -26,6 +26,10 @@
 #include "acq400_chapi.h"
 #include "acq400_chapi_inc.h"
 
+#include <unistd.h>
+#include <poll.h>
+#include <fcntl.h>
+
 namespace acq400_chapi {
 
 void error(const char *format, ...) {
@@ -169,7 +173,7 @@ int Siteclient::sr(char* rx_message, int max_rx, const char* txfmt, ...)
 	return _sr(rx_message, max_rx, lbuf);
 }
 
-Acq400::Acq400(const char* _uut): uut(_uut), fstream(0) {
+Acq400::Acq400(const char* _uut): uut(_uut), fstream(0), skt(0) {
 	Siteclient* s0 = new Siteclient(uut, 4220);
 	char _sitelist[80];
 	s0->sr(_sitelist, 80, "sites");
@@ -277,16 +281,67 @@ FILE* Acq400::stream_open(enum Ports port, const char* mode)
 }
 int Acq400::stream(short buf[], int maxbuf, enum Ports port)
 {
-	return fread(buf, sizeof(short), maxbuf, stream_open(port));
+	return fread(buf, sizeof(short), maxbuf, stream_open(port, "r"));
 }
 int Acq400::stream(long buf[],  int maxbuf, enum Ports port)
 {
-	return fread(buf, sizeof(long), maxbuf, stream_open(port));
+	return fread(buf, sizeof(long), maxbuf, stream_open(port, "r"));
 }
 
+int Acq400::stream_open(enum Ports port)
+{
+	if (skt == 0){
+		skt = connect(uut, port);
+	}
+	return skt;
+}
 int Acq400::stream_out(short buf[], int maxbuf, enum Ports port)
 {
-	return fwrite(buf, sizeof(short), maxbuf, stream_open(port, "w"));
+	if (skt == 0) {
+		stream_open(port);
+	}
+	int timeout = 5000; // 5 seconds
+	int nbytes = 0;
+
+	while(nbytes < maxbuf){
+		struct pollfd fds[1];
+		fds[0].fd = skt;
+		fds[0].events = POLLIN | POLLOUT; // Monitor for read and write
+		int ret = poll(fds, 1, timeout);
+		if (ret == -1) {
+			perror("poll");
+ 			close(skt);
+		        return -1;
+		} else if (ret == 0) {
+		        printf("Timeout occurred! No events.\n");
+		} else {
+		        if (fds[0].revents & POLLIN) {
+				char rbuf[256];
+				int nr = read(skt, rbuf, 256);
+				if (nr > 0){
+					rbuf[nr] = '\0';
+					puts(rbuf);
+				}
+			}	
+       			if (fds[0].revents & POLLOUT) {
+				int wbytes = write(skt, (char*)buf+nbytes, maxbuf-nbytes);
+				if (wbytes > 0){
+					nbytes += wbytes;
+				}else{
+					perror("write");
+				}
+			}
+        		if (fds[0].revents & POLLERR) {
+		        	printf("Error condition on the file descriptor.\n");
+				return -1;
+        		}
+		        if (fds[0].revents & POLLHUP) {
+			        printf("Hang up on the file descriptor.\n");
+				return -1;
+		        }
+		}
+	}
+	return nbytes*sizeof(short);
 }
 int Acq400::stream_out(long buf[],  int maxbuf, enum Ports port)
 {
