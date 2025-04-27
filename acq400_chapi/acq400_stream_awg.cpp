@@ -62,8 +62,9 @@ int main(int argc, char **argv) {
 	split(argv[1], ':', host_port);
 	host = host_port[0].c_str();
 	if (host_port.size() > 1){
-		acq400_chapi::Ports port = static_cast<acq400_chapi::Ports>(atoi(host_port[1].c_str()));
+		port = static_cast<acq400_chapi::Ports>(atoi(host_port[1].c_str()));
 	}
+	printf("port set %d\n", port);
 
 	if (argc > 2){
 		if (strcmp(argv[2], "repeat") == 0){
