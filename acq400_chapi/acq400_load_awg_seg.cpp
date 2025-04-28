@@ -153,6 +153,15 @@ void disable_fp_trigger(acq400_chapi::Acq400& uut)
 	printf("disable_fp_trigger() \"%s\" was \"%s\" set to \"%s\"\n",
 			TRG_SRC_0, G_trigger_stash, "NONE");
 }
+
+void restore_fp_trigger(acq400_chapi::Acq400& uut){
+	std::string response;
+	std::string site0 = "0";
+	uut.set(response, site0, "%s %s", TRG_SRC_0, G_trigger_stash);
+	printf("select_awg_seg() restore \"%s\" to \"%s\"\n",
+			TRG_SRC_0, G_trigger_stash);
+}
+
 void select_awg_seg(int* pskt, acq400_chapi::Acq400& uut, char seg)
 {
 	bool first_time = *pskt == 0;
@@ -160,11 +169,7 @@ void select_awg_seg(int* pskt, acq400_chapi::Acq400& uut, char seg)
 	uut.select_awg_seg(pskt, uut, seg);
 
 	if (first_time && G_trigger_stash != 0){
-		std::string response;
-		std::string site0 = "0";
-		uut.set(response, site0, "%s %s", TRG_SRC_0, G_trigger_stash);
-		printf("select_awg_seg() restore \"%s\" to \"%s\"\n",
-				TRG_SRC_0, G_trigger_stash);
+		restore_fp_trigger(uut);
 	}
 }
 
