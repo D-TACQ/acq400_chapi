@@ -37,11 +37,9 @@ int loader(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* fp)
 	int nbuf = 0;
 	int skt = 0;
 
-	do {
-		while ((nbuf = fread(buf, sizeof(C), BUFLEN, fp)) > 0){
-			uut.stream_out(&skt, buf, nbuf, port);
-		}
-	} while(nbuf > 0);
+	while ((nbuf = fread(buf, sizeof(C), BUFLEN, fp)) > 0){
+		uut.stream_out(&skt, buf, nbuf, port);
+	}
 
 	close(skt);
 	return 0;
@@ -51,7 +49,7 @@ int loader(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* fp)
 
 enum Mode { ARP, CON };     // AutoRepeatOnTrigger, CONtinuous
 
-enum SwitchSeg { NOSWITCH, SWITCH_LAST = -1, /* switch msec = N > 0 */ };
+enum SwitchSeg { NOSWITCH, SWITCH_LAST = -1, SWITCH_FIRST=1 /* switch msec = N > 1 */ };
 
 Mode G_mode = ARP;
 int G_switch_seg = NOSWITCH;
@@ -142,9 +140,15 @@ void iterate_segments(acq400_chapi::Acq400& uut)
 	const int imax = G_segments.size();
 	int skt = 0;
 	int ii = 0;
+#define LIMIT(c) ((c)+1>=20)
 
-	while(1){
-		uut.select_awg_seg(&skt, uut, G_segments[(ii+1 >= imax? 0: ++ii)]);
+	for (int col=0;; col = LIMIT(col)? 0: col+1,
+			 ii = (ii+1 >= imax? 0: ii+1)){
+
+		char seg = G_segments[ii];
+
+		uut.select_awg_seg(&skt, uut, seg);
+		printf("%c%c", seg, LIMIT(col)? '\n': ' '); fflush(stdout);
 		usleep(G_switch_seg*1000);
 	}
 	close(skt);
@@ -183,12 +187,16 @@ int main(int argc, char **argv) {
 	for (int ii = 2; ii < argc; ++ii){
 		(data32? load_seg<long>: load_seg<short>)(uut, argv[ii]);
 	}
+
 	if (G_switch_seg == SWITCH_LAST){
 		int skt = 0;
 		uut.select_awg_seg(&skt, uut, G_segments.back());
 		close(skt);
-	}
-	if (G_switch_seg > 0){
+	}else if (G_switch_seg == SWITCH_FIRST){
+		int skt = 0;
+		uut.select_awg_seg(&skt, uut, G_segments.front());
+		close(skt);
+	}else if (G_switch_seg > 0){
 		iterate_segments(uut);
 	}
 }

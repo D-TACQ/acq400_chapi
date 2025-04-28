@@ -321,7 +321,8 @@ int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
 				int nr = read(skt, rbuf, 256);
 				if (nr > 0){
 					rbuf[nr] = '\0';
-					puts(rbuf);
+					rbuf[strcspn(rbuf, "\n")] = '\0';
+					printf("<%s\n", rbuf);
 				}
 			}	
        			if (fds[0].revents & POLLOUT) {
