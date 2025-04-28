@@ -168,6 +168,26 @@ void select_awg_seg(int* pskt, acq400_chapi::Acq400& uut, char seg)
 	}
 }
 
+void stop_awg(acq400_chapi::Acq400& uut)
+{
+	std::string response;
+	std::string site1 = "1";
+
+	uut.set(response, site1, "%s %s", "playloop_length", "0 0");
+}
+
+#include <csignal>
+#include <iostream>
+
+
+bool G_request_quit;
+
+void signalHandler(int signum) {
+    std::cout << "Interrupt signal (" << signum << ") received.\n";
+    // Cleanup and close up stuff here
+    G_request_quit = true;
+}
+
 void iterate_segments(acq400_chapi::Acq400& uut)
 {
 	const int imax = G_segments.size();
@@ -175,7 +195,9 @@ void iterate_segments(acq400_chapi::Acq400& uut)
 	int ii = 0;
 #define LIMIT(c) ((c)+1>=20)
 
-	for (int col=0;; col = LIMIT(col)? 0: col+1,
+	signal(SIGINT, signalHandler);
+
+	for (int col=0; !G_request_quit; col = LIMIT(col)? 0: col+1,
 			 ii = (ii+1 >= imax? 0: ii+1)){
 
 		char seg = G_segments[ii];
@@ -185,6 +207,8 @@ void iterate_segments(acq400_chapi::Acq400& uut)
 		usleep(G_switch_seg*1000);
 	}
 	close(skt);
+	printf("initerate_segments() stop_awg()\n");
+	stop_awg(uut);
 }
 
 int main(int argc, char **argv) {
