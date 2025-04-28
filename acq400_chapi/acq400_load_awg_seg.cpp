@@ -134,6 +134,39 @@ int load_seg(acq400_chapi::Acq400& uut, const char* sel)
 	return 0;
 }
 
+const char* TRG_SRC_0 = "SIG:SRC:TRG:0";
+char* G_trigger_stash;
+
+void disable_fp_trigger(acq400_chapi::Acq400& uut)
+{
+	std::string response;
+	std::string site0 = "0";
+	uut.get(response, site0, TRG_SRC_0);
+	std::vector<std::string> pv_value;
+
+	split(response, ' ', pv_value);
+	const char* value = pv_value[1].c_str();
+	G_trigger_stash = new char[strlen(value)+1];
+	strcpy(G_trigger_stash, value);
+
+	uut.set(response, site0, "%s %s", TRG_SRC_0, "NONE");
+	printf("disable_fp_trigger() \"%s\" was \"%s\" set to \"%s\"\n",
+			TRG_SRC_0, G_trigger_stash, "NONE");
+}
+void select_awg_seg(int* pskt, acq400_chapi::Acq400& uut, char seg)
+{
+	bool first_time = *pskt == 0;
+
+	uut.select_awg_seg(pskt, uut, seg);
+
+	if (first_time && G_trigger_stash != 0){
+		std::string response;
+		std::string site0 = "0";
+		uut.set(response, site0, "%s %s", TRG_SRC_0, G_trigger_stash);
+		printf("select_awg_seg() restore \"%s\" to \"%s\"\n",
+				TRG_SRC_0, G_trigger_stash);
+	}
+}
 
 void iterate_segments(acq400_chapi::Acq400& uut)
 {
@@ -147,7 +180,7 @@ void iterate_segments(acq400_chapi::Acq400& uut)
 
 		char seg = G_segments[ii];
 
-		uut.select_awg_seg(&skt, uut, seg);
+		select_awg_seg(&skt, uut, seg);
 		printf("%c%c", seg, LIMIT(col)? '\n': ' '); fflush(stdout);
 		usleep(G_switch_seg*1000);
 	}
@@ -178,6 +211,9 @@ int main(int argc, char **argv) {
 	}
 
 	acq400_chapi::Acq400 uut(host);
+
+	disable_fp_trigger(uut);
+
 	int data32;
 	if (uut.get("0", "data32", data32) < 0){
 		fprintf(stderr, "ERROR:");
@@ -190,11 +226,11 @@ int main(int argc, char **argv) {
 
 	if (G_switch_seg == SWITCH_LAST){
 		int skt = 0;
-		uut.select_awg_seg(&skt, uut, G_segments.back());
+		select_awg_seg(&skt, uut, G_segments.back());
 		close(skt);
 	}else if (G_switch_seg == SWITCH_FIRST){
 		int skt = 0;
-		uut.select_awg_seg(&skt, uut, G_segments.front());
+		select_awg_seg(&skt, uut, G_segments.front());
 		close(skt);
 	}else if (G_switch_seg > 0){
 		iterate_segments(uut);
