@@ -11,6 +11,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <assert.h>
 
 namespace acq400_chapi {
 
@@ -64,15 +65,32 @@ enum Ports {
 	AWG_CONTINUOUS = 54205,
 	AWG_STREAM = 54207,
 	MGTDRAM = 53993,
-	MGTDRAM_PULL_DATA = 53991
+	MGTDRAM_PULL_DATA = 53991,
+
+	AWG_SEG_SEL   = 54210,   /* select next segment */
+	AWG_SEG_ARP_A = 54212,   /* one-shot Auto-RePeat */
+	AWG_SEG_CON_A = 54215,	 /* CONtinuous */
+
+	AWG_CH_01 = 54001        /* load by channel */
 };
+
+inline
+enum Ports AWG_SEG_ARP(char seg) {
+	assert(seg >= 'A' && seg <= 'Z');
+	return (enum Ports)(AWG_SEG_ARP_A + 10*(seg-'A'));
+}
+
+inline
+enum Ports AWG_SEG_CON(char seg) {
+	assert(seg >= 'A' && seg <= 'Z');
+	return (enum Ports)(AWG_SEG_CON_A + 10*(seg-'A'));
+}
 
 class Acq400 {
 	const char* uut;
 
 	FILE *fstream;
 	FILE* stream_open(enum Ports port, const char* mode);
-	int skt;
 	int stream_open(enum Ports port);
 public:
 	std::map<std::string, Siteclient*>sites;
@@ -87,9 +105,13 @@ public:
 
 	virtual int stream(short buf[], int maxbuf, enum Ports port=STREAM);
 	virtual int stream(long buf[],  int maxbuf, enum Ports port=STREAM);
-	virtual int stream_out(char buf[], int maxbuf, enum Ports port=AWG_STREAM);
-	virtual int stream_out(short buf[], int maxbuf, enum Ports port=AWG_STREAM);
-	virtual int stream_out(long buf[],  int maxbuf, enum Ports port=AWG_STREAM);
+
+
+	virtual void select_awg_seg(int* pskt, acq400_chapi::Acq400& uut, char seg);
+
+	virtual int stream_out(int* pskt, char buf[], int maxbuf, enum Ports port=AWG_STREAM);
+	virtual int stream_out(int* pskt, short buf[], int maxbuf, enum Ports port=AWG_STREAM);
+	virtual int stream_out(int* pskt, long buf[],  int maxbuf, enum Ports port=AWG_STREAM);
 };
 
 } 	// namespace acq400_chapi

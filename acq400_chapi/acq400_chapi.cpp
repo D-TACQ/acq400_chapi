@@ -16,6 +16,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
+
 #include <netdb.h>
 #include <errno.h>
 
@@ -173,7 +175,7 @@ int Siteclient::sr(char* rx_message, int max_rx, const char* txfmt, ...)
 	return _sr(rx_message, max_rx, lbuf);
 }
 
-Acq400::Acq400(const char* _uut): uut(_uut), fstream(0), skt(0) {
+Acq400::Acq400(const char* _uut): uut(_uut), fstream(0) {
 	Siteclient* s0 = new Siteclient(uut, 4220);
 	char _sitelist[80];
 	s0->sr(_sitelist, 80, "sites");
@@ -290,17 +292,15 @@ int Acq400::stream(long buf[],  int maxbuf, enum Ports port)
 
 int Acq400::stream_open(enum Ports port)
 {
-	if (skt == 0){
-		skt = connect(uut, port);
-	}
-	return skt;
+	return connect(uut, port);
 }
 
-int Acq400::stream_out(char buf[], int maxbuf, enum Ports port)
+int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
 {
-	if (skt == 0) {
-		stream_open(port);
+	if (*pskt == 0) {
+		*pskt = stream_open(port);
 	}
+	int skt = *pskt;
 	int timeout = 5000; // 5 seconds
 	int nbytes = 0;
 
@@ -344,23 +344,34 @@ int Acq400::stream_out(char buf[], int maxbuf, enum Ports port)
 	}
 	return nbytes;
 }
-int Acq400::stream_out(short buf[], int maxbuf, enum Ports port)
+int Acq400::stream_out(int* pskt, short buf[], int maxbuf, enum Ports port)
 {
-	int nbytes = stream_out((char*)buf, maxbuf*sizeof(short), port);
+	int nbytes = stream_out(pskt, (char*)buf, maxbuf*sizeof(short), port);
 	if (nbytes <= 0){
 		return nbytes;
 	}else{
 		return nbytes/sizeof(short);
 	}
 }
-int Acq400::stream_out(long buf[],  int maxbuf, enum Ports port)
+int Acq400::stream_out(int* pskt, long buf[],  int maxbuf, enum Ports port)
 {
-	int nbytes = stream_out((char*)buf, maxbuf*sizeof(long), port);
+	int nbytes = stream_out(pskt, (char*)buf, maxbuf*sizeof(long), port);
 	if (nbytes <= 0){
 		return nbytes;
 	}else{
 		return nbytes/sizeof(long);
 	}
+}
+
+
+void Acq400::select_awg_seg(int* pskt, acq400_chapi::Acq400& uut, char seg)
+{
+	if (*pskt == 0){
+		int flag = 1;
+		*pskt = uut.stream_open(AWG_SEG_SEL);
+		setsockopt(*pskt, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int));
+	}
+	stream_out(pskt, &seg, 1, AWG_SEG_SEL);
 }
 
 

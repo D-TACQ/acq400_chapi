@@ -29,10 +29,11 @@ int streamer(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* fp, bool
 {
 	C* buf = new C[BUFLEN];
 	int nbuf;
+	int skt = 0;
 
 	while(true) {
 		while ((nbuf = fread(buf, sizeof(C), BUFLEN, fp)) > 0){
-			uut.stream_out(buf, nbuf, port);
+			uut.stream_out(&skt, buf, nbuf, port);
 		}
 		if (repeat){
 			rewind(fp);
@@ -42,6 +43,7 @@ int streamer(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* fp, bool
 	}
 
 	fclose(fp);
+	close(skt);
 	return 0;
 }
 
