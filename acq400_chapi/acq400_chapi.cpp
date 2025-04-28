@@ -295,7 +295,8 @@ int Acq400::stream_open(enum Ports port)
 	}
 	return skt;
 }
-int Acq400::stream_out(short buf[], int maxbuf, enum Ports port)
+
+int Acq400::stream_out(char buf[], int maxbuf, enum Ports port)
 {
 	if (skt == 0) {
 		stream_open(port);
@@ -341,11 +342,25 @@ int Acq400::stream_out(short buf[], int maxbuf, enum Ports port)
 		        }
 		}
 	}
-	return nbytes*sizeof(short);
+	return nbytes;
+}
+int Acq400::stream_out(short buf[], int maxbuf, enum Ports port)
+{
+	int nbytes = stream_out((char*)buf, maxbuf*sizeof(short), port);
+	if (nbytes <= 0){
+		return nbytes;
+	}else{
+		return nbytes/sizeof(short);
+	}
 }
 int Acq400::stream_out(long buf[],  int maxbuf, enum Ports port)
 {
-	return fwrite(buf, sizeof(long), maxbuf, stream_open(port, "w"));
+	int nbytes = stream_out((char*)buf, maxbuf*sizeof(long), port);
+	if (nbytes <= 0){
+		return nbytes;
+	}else{
+		return nbytes/sizeof(long);
+	}
 }
 
 

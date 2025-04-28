@@ -87,6 +87,7 @@ public:
 
 	virtual int stream(short buf[], int maxbuf, enum Ports port=STREAM);
 	virtual int stream(long buf[],  int maxbuf, enum Ports port=STREAM);
+	virtual int stream_out(char buf[], int maxbuf, enum Ports port=AWG_STREAM);
 	virtual int stream_out(short buf[], int maxbuf, enum Ports port=AWG_STREAM);
 	virtual int stream_out(long buf[],  int maxbuf, enum Ports port=AWG_STREAM);
 };
