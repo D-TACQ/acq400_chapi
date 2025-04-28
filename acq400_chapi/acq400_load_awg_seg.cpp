@@ -43,7 +43,6 @@ int loader(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* fp)
 		}
 	} while(nbuf > 0);
 
-	fclose(fp);
 	close(skt);
 	return 0;
 }
@@ -148,6 +147,7 @@ void iterate_segments(acq400_chapi::Acq400& uut)
 		uut.select_awg_seg(&skt, uut, G_segments[(ii+1 >= imax? 0: ++ii)]);
 		usleep(G_switch_seg*1000);
 	}
+	close(skt);
 }
 
 int main(int argc, char **argv) {
