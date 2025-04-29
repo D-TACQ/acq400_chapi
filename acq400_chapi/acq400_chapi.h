@@ -87,12 +87,12 @@ enum Ports AWG_SEG_CON(char seg) {
 }
 
 class Acq400 {
-	const char* uut;
 
 	FILE *fstream;
 	FILE* stream_open(enum Ports port, const char* mode);
 	int stream_open(enum Ports port);
 public:
+	const char* uut;
 	std::map<std::string, Siteclient*>sites;
 
 	Acq400(const char* _uut);

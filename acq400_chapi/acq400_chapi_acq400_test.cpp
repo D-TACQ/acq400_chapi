@@ -25,7 +25,7 @@ enum SetGet decode(std::string &site, std::string &keyval, const char* user_comm
 	char scode[3];
 
 	if (sscanf(user_command, "%3s.site %2s %1024[^\n]", mode, scode, the_command) == 3){
-		printf("success: \"%s\" \"%s\" \"%s\"\n", mode, scode, the_command);
+//		printf("success: \"%s\" \"%s\" \"%s\"\n", mode, scode, the_command);
 		site = std::string(scode);
 		keyval = std::string(the_command);
 		if (strcmp(mode, "set") == 0){
@@ -49,11 +49,13 @@ int main(int argc, char **argv) {
 
 	acq400_chapi::Acq400 uut(host);
 
-	for (const auto& [key, value] : uut.sites) {
-		//std::cout << key << std::endl;
-		std::string model;
-		uut.get(model, key, "MODEL");
-		std::cout << "s" << key << " MODEL:" << model << std::endl;
+	if (argc <= 2){
+		for (const auto& [key, value] : uut.sites) {
+			//std::cout << key << std::endl;
+			std::string model;
+			uut.get(model, key, "MODEL");
+			std::cout << "s" << key << " MODEL:" << model << std::endl;
+		}
 	}
 
 	std::string rx_message;
@@ -62,12 +64,12 @@ int main(int argc, char **argv) {
 	int rc;
 
 	if (argc > 2){
-		for (int ic = 3; ic < argc; ++ic){
+		for (int ic = 2; ic < argc; ++ic){
 			switch(decode(site, keyval, argv[ic])){
 			case sgGet:
 				rc = uut.get(rx_message, site, keyval.c_str());
 				if (rc >= 0){
-					std::cout << "result " << rx_message << std::endl;
+					std::cout << uut.uut << "<" << rx_message << std::endl;
 				}else{
 					fprintf(stderr, "ERROR: sr returned %d\n", rc);
 				}
@@ -75,7 +77,7 @@ int main(int argc, char **argv) {
 			case sgSet:
 				rc = uut.set(rx_message, site, keyval.c_str());
 				if (rc >= 0){
-					std::cout << "result " << rx_message << std::endl;
+					std::cout << uut.uut << ">" << rx_message << std::endl;
 				}else{
 					fprintf(stderr, "ERROR: sr returned %d\n", rc);
 				}
@@ -92,7 +94,7 @@ int main(int argc, char **argv) {
 			case sgGet:
 				rc = uut.get(rx_message, site, keyval.c_str());
 				if (rc >= 0){
-					std::cout << "result " << rx_message << std::endl;
+					std::cout << uut.uut << "<" << rx_message << std::endl;
 				}else{
 					fprintf(stderr, "ERROR: sr returned %d\n", rc);
 				}
@@ -100,7 +102,7 @@ int main(int argc, char **argv) {
 			case sgSet:
 				rc = uut.set(rx_message, site, keyval.c_str());
 				if (rc >= 0){
-					std::cout << "result " << rx_message << std::endl;
+					std::cout << uut.uut << ">" << rx_message << std::endl;
 				}else{
 					fprintf(stderr, "ERROR: sr returned %d\n", rc);
 				}
