@@ -164,6 +164,11 @@ void restore_fp_trigger(acq400_chapi::Acq400& uut){
 			TRG_SRC_0, G_trigger_stash);
 }
 
+void set_playloop_len_disable(acq400_chapi::Acq400& uut, bool disable)
+{
+	std::string site0 = "0";
+	uut.set(site0, "playloop_len_disable", (int)disable);
+}
 void select_awg_seg(int* pskt, acq400_chapi::Acq400& uut, char seg)
 {
 	bool first_time = *pskt == 0;
@@ -251,7 +256,12 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
-	for (int ii = 2; ii < argc; ++ii){
+	/* load segments in reverse order. only the last load ENABLES the AWG */
+	set_playloop_len_disable(uut, true);
+	for (int ii = argc-1; ii >= 2; --ii){
+		if (ii == 2){
+			set_playloop_len_disable(uut, false);
+		}
 		(data32? load_seg<long>: load_seg<short>)(uut, argv[ii]);
 	}
 
