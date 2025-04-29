@@ -68,6 +68,7 @@ long get_file_size(const std::string& filename) {
 std::vector<char> G_segments;
 long G_file_size;
 
+int G_noarm = 0;              // disable arming the awg. For stealth data update on running system
 
 void match_buffer_len(acq400_chapi::Acq400& uut, const char* fname)
 {
@@ -245,10 +246,15 @@ int main(int argc, char **argv) {
 	if ((opt = getenv("ACQ400_LAS_SWITCH_SEG"))){
 		G_switch_seg = atoi(opt);
 	}
+	if ((opt = getenv("ACQ400_LAS_NOARM"))){
+		G_noarm = atoi(opt);
+	}
 
 	acq400_chapi::Acq400 uut(host);
 
-	disable_fp_trigger(uut);
+	if (G_noarm == 0){
+		disable_fp_trigger(uut);
+	}
 
 	int data32;
 	if (uut.get("0", "data32", data32) < 0){
@@ -259,7 +265,7 @@ int main(int argc, char **argv) {
 	/* load segments in reverse order. only the last load ENABLES the AWG */
 	set_playloop_len_disable(uut, true);
 	for (int ii = argc-1; ii >= 2; --ii){
-		if (ii == 2){
+		if (ii == 2 && !G_noarm){
 			set_playloop_len_disable(uut, false);
 		}
 		(data32? load_seg<long>: load_seg<short>)(uut, argv[ii]);
