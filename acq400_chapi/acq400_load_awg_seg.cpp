@@ -103,7 +103,7 @@ void match_buffer_len(acq400_chapi::Acq400& uut, const char* fname)
 }
 
 template<class C>
-int load_seg(acq400_chapi::Acq400& uut, const char* sel)
+char load_seg(acq400_chapi::Acq400& uut, const char* sel)
 {
 	std::vector<std::string> seg_file;
 	split(sel, '=', seg_file);
@@ -131,7 +131,7 @@ int load_seg(acq400_chapi::Acq400& uut, const char* sel)
 		loader<C>(uut, port, fp);
 		fclose(fp);
 	}
-	G_segments.push_back(seg);
+	G_segments.insert(G_segments.begin(), seg);
 	return 0;
 }
 
@@ -161,7 +161,7 @@ void restore_fp_trigger(acq400_chapi::Acq400& uut){
 	uut.set(response, site1, "trg=1,0,1");
 	std::string site0 = "0";
 	uut.set(response, site0, "%s %s", TRG_SRC_0, "EXT");
-	printf("select_awg_seg() restore \"%s\" to \"%s\"\n",
+	printf("restore_fp_trigger() restore \"%s\" to \"%s\"\n",
 			TRG_SRC_0, G_trigger_stash);
 }
 
@@ -206,7 +206,9 @@ void iterate_segments(acq400_chapi::Acq400& uut)
 	const int imax = G_segments.size();
 	int skt = 0;
 	int ii = 0;
+	int iter = 0;
 #define LIMIT(c) ((c)+1>=20)
+#define INITFILL	4                    // Prime the queue to start
 
 	signal(SIGINT, signalHandler);
 
@@ -217,10 +219,14 @@ void iterate_segments(acq400_chapi::Acq400& uut)
 
 		select_awg_seg(&skt, uut, seg);
 		printf("%c%c", seg, LIMIT(col)? '\n': ' '); fflush(stdout);
-		usleep(G_switch_seg*1000);
+		if (++iter > INITFILL){
+			usleep(G_switch_seg*1000);
+		}
 	}
 	close(skt);
-	printf("initerate_segments() stop_awg()\n");
+	skt = 0;
+	select_awg_seg(&skt, uut, 'A');
+	printf("iterate_segments() stop_awg()\n");
 	stop_awg(uut);
 }
 
