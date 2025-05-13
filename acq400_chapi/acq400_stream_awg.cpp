@@ -15,6 +15,7 @@
 
 
 #include <stdio.h>
+#include <unistd.h>
 #include "acq400_chapi.h"
 
 #include <string>
