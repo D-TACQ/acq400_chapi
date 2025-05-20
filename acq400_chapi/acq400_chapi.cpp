@@ -5,14 +5,21 @@
  *      Author: pgm
  */
 
-#include <stdio.h>
+
+
+
+
+
+
+#include "acq400_chapi.h"
+#include "acq400_chapi_inc.h"
+
 #include <stdarg.h>
-#include <stdlib.h>
+
 #include <string.h>
 #include <strings.h>
 
 
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -21,14 +28,7 @@
 #include <netdb.h>
 #include <errno.h>
 
-
-
 #include <regex>
-
-#include "acq400_chapi.h"
-#include "acq400_chapi_inc.h"
-
-#include <unistd.h>
 #include <poll.h>
 #include <fcntl.h>
 

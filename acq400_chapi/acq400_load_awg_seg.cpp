@@ -19,14 +19,10 @@
  */
 
 
-#include <stdio.h>
-#include "acq400_chapi.h"
 
-#include <string>
-#include <iostream>
-#include <vector>
-#include <bits/stdc++.h>
+#include "acq400_chapi.h"
 #include "acq400_chapi_inc.h"
+
 #define BUFLEN 0x10000
 
 

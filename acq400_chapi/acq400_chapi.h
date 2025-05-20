@@ -8,10 +8,13 @@
 #ifndef ACQ400_CHAPI_ACQ400_CHAPI_H_
 #define ACQ400_CHAPI_ACQ400_CHAPI_H_
 
-#include <vector>
-#include <map>
-#include <string>
 #include <assert.h>
+#include <string>
+#include <map>
+#include <vector>
+
+
+
 
 namespace acq400_chapi {
 

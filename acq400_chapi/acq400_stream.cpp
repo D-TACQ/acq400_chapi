@@ -10,13 +10,9 @@
  */
 
 
-#include <stdio.h>
-#include <stdlib.h>
 #include "acq400_chapi.h"
+#include "acq400_chapi_inc.h"
 
-#include <string>
-#include <iostream>
-#include <bits/stdc++.h>
 
 #define BUFLEN 0x10000
 

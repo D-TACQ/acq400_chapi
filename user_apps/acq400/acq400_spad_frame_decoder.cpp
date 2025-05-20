@@ -224,22 +224,12 @@ Actual rates:
  */
 
 
-
-#include <stdio.h>
-#include <unistd.h>
 #include "acq400_chapi.h"
-
-#include <string>
-#include <iostream>
-#include <bits/stdc++.h>
+#include "acq400_chapi_inc.h"
 
 #include <popt.h>
 #include <sys/uio.h>
 #define BUFLEN 0x10000
-
-#include <errno.h>
-#include <signal.h>
-#include <time.h>
 
 
 #define STDOUT 1
