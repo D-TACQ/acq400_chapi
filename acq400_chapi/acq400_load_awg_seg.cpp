@@ -25,7 +25,7 @@
 
 #define BUFLEN 0x10000
 
-#include <sys/socket.h>   // shutdown()
+
 
 template <class C>
 int loader(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* fp)
@@ -37,9 +37,8 @@ int loader(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* fp)
 	while ((nbuf = fread(buf, sizeof(C), BUFLEN, fp)) > 0){
 		uut.stream_out(&skt, buf, nbuf, port);
 	}
-	shutdown(skt, SHUT_WR);
+
 	uut.stream_out(&skt, buf, 0, port);
-	close(skt);
 	return 0;
 }
 

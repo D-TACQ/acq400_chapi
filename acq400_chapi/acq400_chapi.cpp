@@ -34,6 +34,19 @@
 
 namespace acq400_chapi {
 
+int getenvint(const char* key, int def)
+{
+	const char *val = ::getenv(key);
+	if (val){
+		return strtol(val, 0, 0);
+	}else{
+		return def;
+	}
+}
+
+
+static int G_verbose = getenvint("ACQ400_CHAPI_VERBOSE", 0);
+
 void error(const char *format, ...) {
 	char buf[128];
 	va_list args;
@@ -97,11 +110,11 @@ int Netclient::receive_message(char* rx_message, int max_rx, const char* termex)
 		}
 
 		buf[rc] = '\0';
-		//printf("<%s\n", buf);
+		if (G_verbose) printf("<%s\n", buf);
 
 		std::cmatch cm;
 		if (std::regex_search(buf, cm, term_regex)){
-			//printf("match cursor:%d string:\"%s\"\n", cm.position(), buf);
+			if (G_verbose>1) printf("match cursor:%d string:\"%s\"\n", cm.position(), buf);
 			nrx += cm.position();
 			for (int ii = 0; ii < cm.position(); ++ii){
 				buffer.push_back(buf[ii]);
@@ -115,7 +128,7 @@ int Netclient::receive_message(char* rx_message, int max_rx, const char* termex)
 			strncpy(rx_message, buffer.data(), nrx);
 			rx_message[nrx] = '\0';
 			buffer.clear();
-			//printf("copy %d: \"%s\"\n", nrx, rx_message);
+			if (G_verbose>1) printf("copy %d: \"%s\"\n", nrx, rx_message);
 			// add any more stuff to buffer?
 			return nrx;
 		}else{
@@ -130,15 +143,6 @@ int Netclient::receive_message(char* rx_message, int max_rx, const char* termex)
 }
 
 
-int getenvint(const char* key, int def)
-{
-	const char *val = ::getenv(key);
-	if (val){
-		return strtol(val, 0, 0);
-	}else{
-		return def;
-	}
-}
 
 Siteclient::Siteclient(const char* _addr, int _port) :
 		Netclient(_addr, _port), trace(getenvint("SITECLIENT_TRACE", 0))
@@ -293,7 +297,7 @@ int Acq400::stream(long buf[],  int maxbuf, enum Ports port)
 int Acq400::stream_open(enum Ports port)
 {
 	int rc = connect(uut, port);
-	printf("stream_open() %d ret %d\n", port, rc);
+	if (G_verbose) printf("stream_open() %d ret %d\n", port, rc);
 	return rc;
 }
 
@@ -306,6 +310,9 @@ int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
 	int timeout = 5000; // 5 seconds
 	int nbytes = 0;
 
+	if (maxbuf == 0){
+		shutdown(skt, SHUT_WR);
+	}
 	while(nbytes < maxbuf || maxbuf == 0){
 		struct pollfd fds[1];
 		fds[0].fd = skt;
@@ -331,7 +338,7 @@ int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
 				int wbytes = write(skt, (char*)buf+nbytes, maxbuf-nbytes);
 				if (wbytes > 0){
 					nbytes += wbytes;
-					printf("write %d %d %d %d\n", __LINE__, skt, maxbuf, wbytes);
+					if (G_verbose) printf("write %d %d %d %d\n", __LINE__, skt, maxbuf, wbytes);
 				}else{
 					perror("write");
 				}
@@ -341,6 +348,10 @@ int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
 				return -1;
         		}
 		        if (fds[0].revents & POLLHUP) {
+				if (maxbuf == 0){
+					close(skt);
+					return 0;
+				}
 			        printf("Hang up on the file descriptor.\n");
 				return -1;
 		        }
