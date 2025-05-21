@@ -11,6 +11,9 @@ APPS=acq400_upload acq400_spad_frame_decoder
 
 apps: $(APPS)
 
+install_user: apps
+	cp $(APPS) $(HOME)/bin
+
 
 clean:
 	rm -f $(APPS)
