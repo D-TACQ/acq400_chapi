@@ -114,7 +114,7 @@ int Netclient::receive_message(char* rx_message, int max_rx, const char* termex)
 
 		std::cmatch cm;
 		if (std::regex_search(buf, cm, term_regex)){
-			if (G_verbose>1) printf("match cursor:%d string:\"%s\"\n", cm.position(), buf);
+			if (G_verbose>1) printf("match cursor:%ld string:\"%s\"\n", cm.position(), buf);
 			nrx += cm.position();
 			for (int ii = 0; ii < cm.position(); ++ii){
 				buffer.push_back(buf[ii]);
