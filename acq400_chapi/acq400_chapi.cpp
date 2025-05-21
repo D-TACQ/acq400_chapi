@@ -292,7 +292,9 @@ int Acq400::stream(long buf[],  int maxbuf, enum Ports port)
 
 int Acq400::stream_open(enum Ports port)
 {
-	return connect(uut, port);
+	int rc = connect(uut, port);
+	printf("stream_open() %d ret %d\n", port, rc);
+	return rc;
 }
 
 int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
@@ -304,7 +306,7 @@ int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
 	int timeout = 5000; // 5 seconds
 	int nbytes = 0;
 
-	while(nbytes < maxbuf){
+	while(nbytes < maxbuf || maxbuf == 0){
 		struct pollfd fds[1];
 		fds[0].fd = skt;
 		fds[0].events = POLLIN | POLLOUT; // Monitor for read and write
@@ -325,10 +327,11 @@ int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
 					printf("<%s\n", rbuf);
 				}
 			}	
-       			if (fds[0].revents & POLLOUT) {
+       			if (maxbuf != 0 && fds[0].revents & POLLOUT) {
 				int wbytes = write(skt, (char*)buf+nbytes, maxbuf-nbytes);
 				if (wbytes > 0){
 					nbytes += wbytes;
+					printf("write %d %d %d %d\n", __LINE__, skt, maxbuf, wbytes);
 				}else{
 					perror("write");
 				}
