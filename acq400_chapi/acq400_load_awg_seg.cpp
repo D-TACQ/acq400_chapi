@@ -156,9 +156,9 @@ void disable_fp_trigger(acq400_chapi::Acq400& uut)
 void restore_fp_trigger(acq400_chapi::Acq400& uut){
 	std::string response;
 	std::string site1 = "1";
-	uut.set(response, site1, "trg=1,0,1");
+//	uut.set(response, site1, "trg=1,0,1");
 	std::string site0 = "0";
-	uut.set(response, site0, "%s %s", TRG_SRC_0, "EXT");
+	uut.set(response, site0, "%s %s", TRG_SRC_0, G_trigger_stash);
 	printf("restore_fp_trigger() restore \"%s\" to \"%s\"\n",
 			TRG_SRC_0, G_trigger_stash);
 }
