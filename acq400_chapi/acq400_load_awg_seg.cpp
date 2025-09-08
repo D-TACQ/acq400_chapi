@@ -84,11 +84,11 @@ void match_buffer_len(acq400_chapi::Acq400& uut, const char* fname)
 		/* find blp such that (4+2n) * blp == G_file_size */
 		for (int nn = 1; nn < 10; ++nn){
 			blp = G_file_size/(4*2*nn);
-			if (blp < bl){
+			if (blp <= bl){
 				break;
 			}
 		}
-		if (!(blp < bl)){
+		if (!(blp <= bl)){
 			fprintf(stderr, "ERROR: file will not fit\n");
 			exit(1);
 		}
