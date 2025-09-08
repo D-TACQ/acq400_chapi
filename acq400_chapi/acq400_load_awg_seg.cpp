@@ -60,6 +60,7 @@ long get_file_size(const std::string& filename) {
     return rc == 0 ? stat_buf.st_size : -1;
 }
 
+std::string dist_s1;
 
 
 std::vector<char> G_segments;
@@ -76,14 +77,27 @@ void match_buffer_len(acq400_chapi::Acq400& uut, const char* fname)
 		fprintf(stderr, "ERROR: failed to read bufferlen\n");
 		exit(1);
 	}
+	int awg_seg_bufs;
+
+	if (uut.get(::dist_s1, "awg_seg_bufs", awg_seg_bufs) < 0){
+		fprintf(stderr, "ERROR: failed to read awg_seg_bufs\n");
+		exit(1);
+	}
 	if (G_file_size < bl){
 		blp = G_file_size;
 	}else if (G_file_size < 4*bl){
 		blp = G_file_size/4;
 	}else{
 		/* find blp such that (4+2nn) * blp == G_file_size */
-		for (int nn = 1; nn < 10; ++nn){
-			blp = G_file_size/(4+2*nn);
+		for (int nn = 1; nn < 512; ++nn){
+			int awg_bufs = 4+2*nn;
+
+			if (awg_bufs > awg_seg_bufs){
+				fprintf(stderr, "ERROR trying load more than awg_seg_bufs %d\n",
+						awg_seg_bufs);
+				exit(1);
+			}
+			blp = G_file_size/awg_bufs;
 			if (blp <= bl){
 				break;
 			}
@@ -227,6 +241,23 @@ void iterate_segments(acq400_chapi::Acq400& uut)
 	stop_awg(uut);
 }
 
+void set_max_seg(acq400_chapi::Acq400& uut, const char* last_arg)
+{
+	char seg;
+	char fn[256];
+	if (sscanf(last_arg, "%c=%s", &seg, fn) == 2){
+		if (seg >= 'A' && seg <= 'Z'){
+			std::string response;
+
+			if (uut.set(response, ::dist_s1, "awg_max_seg=%c", seg) < 0){
+				fprintf(stderr, "ERROR failed to set awg_max_seg\n");
+				exit(1);
+			}
+		} else {
+			fprintf(stderr, "ERROR: segment must be A-Z not %c\n", seg);
+		}
+	}
+}
 int main(int argc, char **argv) {
 	if (argc < 3){
 		fprintf(stderr, USAGE);
@@ -264,9 +295,17 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "ERROR:");
 		exit(1);
 	}
+	if (uut.get(::dist_s1, "0", "dist_s1" ) < 0){
+		fprintf(stderr, "ERROR:");
+		exit(1);
+	}
+
 
 	/* load segments in reverse order. only the last load ENABLES the AWG */
 	set_playloop_len_disable(uut, true);
+
+	set_max_seg(uut, argv[argc-1]);
+
 	for (int ii = argc-1; ii >= 2; --ii){
 		if (ii == 2 && !G_noarm){
 			set_playloop_len_disable(uut, false);
