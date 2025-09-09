@@ -14,7 +14,7 @@
 #include <vector>
 
 
-
+#define IN_RANGE(x, l, r)  ((x)>=(l) && (x) <=(r))
 
 namespace acq400_chapi {
 

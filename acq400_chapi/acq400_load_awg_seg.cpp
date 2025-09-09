@@ -299,6 +299,10 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "ERROR:");
 		exit(1);
 	}
+	if (!IN_RANGE(std::stoi(::dist_s1), 1, 6)){
+		fprintf(stderr, "ERROR: dist_s1 is not set 1-6 %d", std::stoi(::dist_s1));
+		exit(1);
+	}
 
 
 	/* load segments in reverse order. only the last load ENABLES the AWG */
