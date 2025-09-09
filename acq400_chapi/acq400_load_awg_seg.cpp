@@ -18,6 +18,8 @@
  *      Author: pgm
  */
 
+#include <iostream>
+#include <chrono>
 
 
 #include "acq400_chapi.h"
@@ -139,7 +141,17 @@ char load_seg(acq400_chapi::Acq400& uut, const char* sel)
 		acq400_chapi::Ports port = (G_mode == ARP?
 				acq400_chapi::AWG_SEG_ARP:
 				acq400_chapi::AWG_SEG_CON  )(seg);
+		auto start = std::chrono::high_resolution_clock::now();
 		loader<C>(uut, port, fp);
+		auto end = std::chrono::high_resolution_clock::now();
+
+		auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
+		double MB = (double)G_file_size/0x100000;
+		double sec = (double)duration/1e9;
+		std::cout << "TIMING:loaded: " << MB << "MB in "
+		          << std::fixed << std::setprecision(2) << sec << " sec "
+			  << MB/sec << " MB/s" << std::endl;
 		fclose(fp);
 	}
 	G_segments.insert(G_segments.begin(), seg);

@@ -12,8 +12,8 @@ else
   files=($@)
 fi
 
-export ${ACQ400_LAS_MODE:-ARP}
-export ${ACQ400_LAS_SWITCH_SEG:-1000}
+export ACQ400_LAS_MODE=${ACQ400_LAS_MODE:-ARP}
+export ACQ400_LAS_SWITCH_SEG=${ACQ400_LAS_SWITCH_SEG:-1000}
 
 if [ ${#files[@]} -gt 0 ]; then
   cmd="acq400_load_awg_seg ${uut}"
