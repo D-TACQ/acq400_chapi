@@ -295,6 +295,13 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "ERROR:");
 		exit(1);
 	}
+
+	std::string response;
+
+	if (uut.set(response, "1", "AWG:DIST=%s", "AWG")){
+		fprintf(stderr, "ERROR: failed to select AWG:DIST=AWG");
+		exit(1);
+	}
 	if (uut.get(::dist_s1, "0", "dist_s1" ) < 0){
 		fprintf(stderr, "ERROR:");
 		exit(1);
