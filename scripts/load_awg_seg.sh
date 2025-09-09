@@ -12,8 +12,11 @@ else
   files=($@)
 fi
 
+export ${ACQ400_LAS_MODE:-ARP}
+export ${ACQ400_LAS_SWITCH_SEG:-1000}
+
 if [ ${#files[@]} -gt 0 ]; then
-  cmd="ACQ400_LAS_MODE=ARP ACQ400_LAS_SWITCH_SEG=1000 acq400_load_awg_seg ${uut}"
+  cmd="acq400_load_awg_seg ${uut}"
   [ -n "${files[0]}" ] && cmd="$cmd A=${files[0]}"
   [ -n "${files[1]}" ] && cmd="$cmd B=${files[1]}"
   [ -n "${files[2]}" ] && cmd="$cmd C=${files[2]}"
