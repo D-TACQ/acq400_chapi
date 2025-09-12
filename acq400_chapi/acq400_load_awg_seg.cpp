@@ -87,7 +87,7 @@ void match_buffer_len(acq400_chapi::Acq400& uut, const char* fname)
 	}
 	if (G_file_size < bl){
 		blp = G_file_size;
-	}else if (G_file_size < 4*bl){
+	}else if (G_file_size <= 4*bl){
 		blp = G_file_size/4;
 	}else{
 		/* find blp such that (4+2nn) * blp == G_file_size */
