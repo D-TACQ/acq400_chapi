@@ -326,6 +326,8 @@ int main(int argc, char **argv) {
 
 	/* load segments in reverse order. only the last load ENABLES the AWG */
 	set_playloop_len_disable(uut, true);
+	stop_awg(uut);
+	sleep(1);
 
 	set_max_seg(uut, argv[argc-1]);
 
