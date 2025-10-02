@@ -81,16 +81,45 @@ int awg_loader(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* fp)
 }
 
 
-template<class C>
-char load_awg(acq400_chapi::Acq400& uut, const char* fname)
+void match_buffer_len(acq400_chapi::Acq400& uut, const char* fname)
 {
-	if (G_file_size == 0){
-		G_file_size = get_file_size(fname);
-	}else if (get_file_size(fname) != G_file_size){
-		fprintf(stderr, "ERROR: file sizes do not match\n");
+	std::string site0 = "0";
+	int bl;
+	int blp;
+	if (uut.get(site0, "bufferlen", bl) <= 0){
+		fprintf(stderr, "ERROR: failed to read bufferlen\n");
 		exit(1);
 	}
 
+	if (G_file_size < bl){
+		blp = G_file_size;
+	}else if (G_file_size <= 4*bl){
+		blp = G_file_size/4;
+	}else{
+		/* find blp such that (4+2nn) * blp == G_file_size */
+		for (int nn = 1; nn < 512; ++nn){
+			int awg_bufs = 4+2*nn;
+			blp = G_file_size/awg_bufs;
+			if (blp <= bl){
+				break;
+			}
+		}
+		if (!(blp <= bl)){
+			fprintf(stderr, "ERROR: file will not fit\n");
+			exit(1);
+		}
+	}
+	if (uut.set(site0, "dist_bufferlen_play", blp)){
+		fprintf(stderr, "ERROR: failed to set dist_bufferlen_play\n");
+		exit(1);
+	}
+}
+
+template<class C>
+char load_awg(acq400_chapi::Acq400& uut, const char* fname)
+{
+	G_file_size = get_file_size(fname);
+	match_buffer_len(uut, fname);
 	FILE* fp = fopen(fname, "rb");
 	if (fp == 0){
 		fprintf(stderr, "ERROR failed to open file \"%s\"\n", fname);
