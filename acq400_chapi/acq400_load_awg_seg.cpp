@@ -27,23 +27,6 @@
 
 #define BUFLEN 0x10000
 
-
-
-template <class C>
-int loader(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* fp)
-{
-	C* buf = new C[BUFLEN];
-	int nbuf = 0;
-	int skt = 0;
-
-	while ((nbuf = fread(buf, sizeof(C), BUFLEN, fp)) > 0){
-		uut.stream_out(&skt, buf, nbuf, port);
-	}
-
-	uut.stream_out(&skt, buf, 0, port);
-	return 0;
-}
-
 #define USAGE "USAGE: OPTS] acq400_load_awg_seg UUT SEG=FILE [SEG=FILE]\n"
 
 enum Mode { ARP, CON };     // AutoRepeatOnTrigger, CONtinuous
@@ -115,6 +98,24 @@ void match_buffer_len(acq400_chapi::Acq400& uut, const char* fname)
 	}
 }
 
+#define BUFLEN 0x10000
+
+template <class C>
+int awg_loader(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* fp)
+{
+	C* buf = new C[BUFLEN];
+	int nbuf = 0;
+	int skt = 0;
+
+	while ((nbuf = fread(buf, sizeof(C), BUFLEN, fp)) > 0){
+		uut.stream_out(&skt, buf, nbuf, port);
+	}
+
+	uut.stream_out(&skt, buf, 0, port);
+	return 0;
+}
+
+
 template<class C>
 char load_seg(acq400_chapi::Acq400& uut, const char* sel)
 {
@@ -142,7 +143,7 @@ char load_seg(acq400_chapi::Acq400& uut, const char* sel)
 				acq400_chapi::AWG_SEG_ARP:
 				acq400_chapi::AWG_SEG_CON  )(seg);
 		auto start = std::chrono::high_resolution_clock::now();
-		loader<C>(uut, port, fp);
+		::awg_loader<C>(uut, port, fp);
 		auto end = std::chrono::high_resolution_clock::now();
 
 		auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
