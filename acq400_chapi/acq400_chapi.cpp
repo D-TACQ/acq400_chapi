@@ -384,6 +384,21 @@ int Acq400::stream_out(int* pskt, long buf[],  int maxbuf, enum Ports port)
 }
 
 
+void Acq400::set_playloop_len_disable(bool disable)
+{
+	std::string site0 = "0";
+	this->set(site0, "playloop_len_disable", (int)disable);
+}
+
+void Acq400::stop_awg()
+{
+	std::string response;
+	std::string site1 = "1";
+
+	this->set(response, site1, "%s %s", "playloop_length", "0 0");
+}
+
+
 void Acq400::select_awg_seg(int* pskt, char seg)
 {
 	if (*pskt == 0){

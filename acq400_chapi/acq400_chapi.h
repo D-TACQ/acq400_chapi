@@ -111,6 +111,10 @@ public:
 
 
 	virtual void select_awg_seg(int* pskt, char seg);
+	virtual void stop_awg();
+	/* request awg_stop */
+	virtual void set_playloop_len_disable(bool disable);
+	/* request awg_stop on next load */
 
 	virtual int stream_out(int* pskt, char buf[], int maxbuf, enum Ports port=AWG_STREAM);
 	virtual int stream_out(int* pskt, short buf[], int maxbuf, enum Ports port=AWG_STREAM);

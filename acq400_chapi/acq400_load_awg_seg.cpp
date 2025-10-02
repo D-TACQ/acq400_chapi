@@ -188,30 +188,6 @@ void restore_fp_trigger(acq400_chapi::Acq400& uut){
 			TRG_SRC_0, G_trigger_stash);
 }
 
-void set_playloop_len_disable(acq400_chapi::Acq400& uut, bool disable)
-{
-	std::string site0 = "0";
-	uut.set(site0, "playloop_len_disable", (int)disable);
-}
-void select_awg_seg(int* pskt, acq400_chapi::Acq400& uut, char seg)
-{
-	bool first_time = *pskt == 0;
-
-	uut.select_awg_seg(pskt, uut, seg);
-
-	if (first_time && G_trigger_stash != 0){
-		restore_fp_trigger(uut);
-	}
-}
-
-void stop_awg(acq400_chapi::Acq400& uut)
-{
-	std::string response;
-	std::string site1 = "1";
-
-	uut.set(response, site1, "%s %s", "playloop_length", "0 0");
-}
-
 #include <csignal>
 #include <iostream>
 
@@ -240,7 +216,7 @@ void iterate_segments(acq400_chapi::Acq400& uut)
 
 		char seg = G_segments[ii];
 
-		select_awg_seg(&skt, uut, seg);
+		uut.select_awg_seg(&skt, seg);
 		printf("%c%c", seg, LIMIT(col)? '\n': ' '); fflush(stdout);
 		if (++iter > INITFILL){
 			usleep(G_switch_seg*1000);
@@ -248,9 +224,9 @@ void iterate_segments(acq400_chapi::Acq400& uut)
 	}
 	close(skt);
 	skt = 0;
-	select_awg_seg(&skt, uut, 'A');
+	uut.select_awg_seg(&skt, 'A');
 	printf("iterate_segments() stop_awg()\n");
-	stop_awg(uut);
+	uut.stop_awg();
 }
 
 void set_max_seg(acq400_chapi::Acq400& uut, const char* last_arg)
@@ -325,13 +301,13 @@ int main(int argc, char **argv) {
 
 
 	/* load segments in reverse order. only the last load ENABLES the AWG */
-	set_playloop_len_disable(uut, true);
+	uut.set_playloop_len_disable(true);
 
 	set_max_seg(uut, argv[argc-1]);
 
 	for (int ii = argc-1; ii >= 2; --ii){
 		if (ii == 2 && !G_noarm){
-			set_playloop_len_disable(uut, false);
+			uut.set_playloop_len_disable(false);
 		}
 		(data32? load_seg<long>: load_seg<short>)(uut, argv[ii]);
 	}
@@ -342,7 +318,7 @@ int main(int argc, char **argv) {
 		close(skt);
 	}else if (G_switch_seg == SWITCH_FIRST){
 		int skt = 0;
-		select_awg_seg(&skt, uut, G_segments.front());
+		uut.select_awg_seg(&skt, G_segments.front());
 		close(skt);
 	}else if (G_switch_seg > 0){
 		iterate_segments(uut);
