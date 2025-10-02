@@ -301,13 +301,15 @@ int Acq400::stream_open(enum Ports port)
 	return rc;
 }
 
+const int STREAM_TO = 5000;  // 5 seconds
+
 int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
 {
 	if (*pskt == 0) {
 		*pskt = stream_open(port);
 	}
 	int skt = *pskt;
-	int timeout = 5000; // 5 seconds
+
 	int nbytes = 0;
 
 	if (maxbuf == 0){
@@ -315,6 +317,7 @@ int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
 	}
 	while(nbytes < maxbuf || maxbuf == 0){
 		struct pollfd fds[1];
+		int timeout = STREAM_TO;
 		fds[0].fd = skt;
 		fds[0].events = POLLIN | POLLOUT; // Monitor for read and write
 		int ret = poll(fds, 1, timeout);
@@ -323,7 +326,7 @@ int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
  			close(skt);
 		        return -1;
 		} else if (ret == 0) {
-		        printf("Timeout occurred! No events.\n");
+		        printf("Timeout occurred! No events in %d msec.\n", STREAM_TO);
 		} else {
 		        if (fds[0].revents & POLLIN) {
 				char rbuf[256];
@@ -332,6 +335,8 @@ int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
 					rbuf[nr] = '\0';
 					rbuf[strcspn(rbuf, "\n")] = '\0';
 					printf("<%s\n", rbuf);
+				}else{
+					printf("POLLIN, no bytes? %d\n", nr);
 				}
 			}	
        			if (maxbuf != 0 && fds[0].revents & POLLOUT) {
