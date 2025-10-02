@@ -384,11 +384,11 @@ int Acq400::stream_out(int* pskt, long buf[],  int maxbuf, enum Ports port)
 }
 
 
-void Acq400::select_awg_seg(int* pskt, acq400_chapi::Acq400& uut, char seg)
+void Acq400::select_awg_seg(int* pskt, char seg)
 {
 	if (*pskt == 0){
 		int flag = 1;
-		*pskt = uut.stream_open(AWG_SEG_SEL);
+		*pskt = stream_open(AWG_SEG_SEL);
 		setsockopt(*pskt, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int));
 	}
 	stream_out(pskt, &seg, 1, AWG_SEG_SEL);

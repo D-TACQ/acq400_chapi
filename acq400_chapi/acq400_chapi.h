@@ -110,7 +110,7 @@ public:
 	virtual int stream(long buf[],  int maxbuf, enum Ports port=STREAM);
 
 
-	virtual void select_awg_seg(int* pskt, acq400_chapi::Acq400& uut, char seg);
+	virtual void select_awg_seg(int* pskt, char seg);
 
 	virtual int stream_out(int* pskt, char buf[], int maxbuf, enum Ports port=AWG_STREAM);
 	virtual int stream_out(int* pskt, short buf[], int maxbuf, enum Ports port=AWG_STREAM);

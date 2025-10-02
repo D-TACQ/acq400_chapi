@@ -338,7 +338,7 @@ int main(int argc, char **argv) {
 
 	if (G_switch_seg == SWITCH_LAST){
 		int skt = 0;
-		select_awg_seg(&skt, uut, G_segments.back());
+		uut.select_awg_seg(&skt, G_segments.back());
 		close(skt);
 	}else if (G_switch_seg == SWITCH_FIRST){
 		int skt = 0;
