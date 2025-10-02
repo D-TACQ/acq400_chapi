@@ -1,0 +1,36 @@
+#!/usr/bin/bash
+# load and run two AWG patterns alternately and repeatedly
+# LONG=LONGFILE SHORT=SHORTFILE ./scripts/awg_load_play_looptest [UUT]
+# 3 load methods are presented, uncomment the one you want to test.
+UUT=${1:-acq1001_070}
+
+load_count=0
+pat=0
+
+LONG=${LONG:-4CH.4B.33554432.1CYCL.AO422.dat}
+SHORT=${SHORT:-AO422_16-4-1048576d32-001.dat}
+
+
+while true; do
+	load_count=$((load_count+1))
+        pat=$((!pat))
+
+	if [ $pat -ne 0 ]; then
+		DATA=$LONG
+	else 
+		DATA=$SHORT
+	fi
+
+	echo "$(date) floggit load_count $load_count pat $pat DATA $DATA"
+
+# uncomment to demo load to SEG A
+#        SITECLIENT_TRACE=1 ACQ400_LAS_SWITCH_SEG=1 ./acq400_chapi/acq400_load_awg_seg ${UUT} A=$DATA
+# uncomment to demo load with basic command line tools
+	cat $DATA | pv | nc ${UUT} 54201
+# uncomment to demo oneshot load from CHAPI
+#	SITECLIENT_TRACE=1 ACQ400_LAS_SWITCH_SEG=1 ./acq400_chapi/acq400_load_awg_oneshot ${UUT} $DATA
+	
+	sleep 10
+done
+
+
