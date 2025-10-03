@@ -188,9 +188,6 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
-	uut.set_playloop_len_disable(true);
-
-
 	if (data32){
 		load_awg<long>(uut, data_file);
 	}else{
