@@ -5,7 +5,7 @@
 UUT=${1:-acq1001_070}
 
 load_count=0
-pat=0
+pat=1
 
 LONG=${LONG:-4CH.4B.33554432.1CYCL.AO422.dat}
 SHORT=${SHORT:-AO422_16-4-1048576d32-001.dat}
@@ -21,16 +21,18 @@ while true; do
 		DATA=$SHORT
 	fi
 
-	echo "$(date) floggit load_count $load_count pat $pat DATA $DATA"
+	echo "awg_load_play_looptest $(date) load_count $load_count pat $pat DATA $DATA $(stat -c%s $DATA) bytes"
 
 # uncomment to demo load to SEG A
 #        SITECLIENT_TRACE=1 ACQ400_LAS_SWITCH_SEG=1 ./acq400_chapi/acq400_load_awg_seg ${UUT} A=$DATA
 # uncomment to demo load with basic command line tools
-	cat $DATA | pv | nc ${UUT} 54201
+#	cat $DATA | pv | nc -w1 ${UUT} 54201
 # uncomment to demo oneshot load from CHAPI
-#	SITECLIENT_TRACE=1 ACQ400_LAS_SWITCH_SEG=1 ./acq400_chapi/acq400_load_awg_oneshot ${UUT} $DATA
-	
-	sleep 10
+#	SITECLIENT_TRACE=1 ./acq400_chapi/acq400_load_awg_oneshot ${UUT} $DATA
+	./acq400_chapi/acq400_load_awg_oneshot ${UUT} $DATA
+
+	echo sleep ${SLEEP:-10}	
+	sleep ${SLEEP:-10}
 done
 
 
