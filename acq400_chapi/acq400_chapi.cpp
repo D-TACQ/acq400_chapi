@@ -327,7 +327,7 @@ int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
  			close(skt);
 		        return -1;
 		} else if (ret == 0) {
-		        printf("Timeout occurred! No events in %d msec.\n", STREAM_TO);
+			if (G_verbose) printf("Timeout occurred! No events in %d msec.\n", STREAM_TO);
 		} else {
 		        if (fds[0].revents & POLLIN) {
 				char rbuf[256];
@@ -335,9 +335,9 @@ int Acq400::stream_out(int* pskt, char buf[], int maxbuf, enum Ports port)
 				if (nr > 0){
 					rbuf[nr] = '\0';
 					rbuf[strcspn(rbuf, "\n")] = '\0';
-					printf("<%s\n", rbuf);
+					if (G_verbose) printf("<%s\n", rbuf);
 				}else{
-					printf("POLLIN, no bytes? %d\n", nr);
+					if (G_verbose) printf("POLLIN, no bytes? %d\n", nr);
 				}
 			}	
        			if (maxbuf != 0 && fds[0].revents & POLLOUT) {
