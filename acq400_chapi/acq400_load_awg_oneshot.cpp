@@ -3,12 +3,10 @@
  *
  *  Created on: 01 October 2025
  *
- *  [OPTS] acq400_load_awg_oneshot UUT FILE [SEG=FILE]
+ *  acq400_load_awg_oneshot UUT FILE
  *  Where
  *  UUT                     # ip or DNS name of ACQ400 unit as normal
- *  SEG                     # [A-Z] load segment (subject to boot time limit)
- *  FILE                    # binary file to load. All files MUST be same size
- *  SEG without [=FILE]     # select segment, no load
+ *  FILE                    # binary file to load.
  *  Where OPTS are:
  *  ACQ400_AUTO_SOFT_TRIGGER=0|1
  *
@@ -24,26 +22,12 @@
 #include "acq400_chapi.h"
 #include "acq400_chapi_inc.h"
 
-
-
-
-
-
-#define USAGE "USAGE: OPTS] acq400_load_awg_seg UUT SEG=FILE [SEG=FILE]\n"
+#define USAGE "USAGE: acq400_load_awg_oneshot UUT FILE [SEG=FILE]\n"
 
 enum Mode { ONESHOT, ARP, CON };     // AutoRepeatOnTrigger, CONtinuous
 
 
 Mode G_mode = ONESHOT;
-
-#include <sys/stat.h>
-#include <string>
-
-long get_file_size(const std::string& filename) {
-    struct stat stat_buf;
-    int rc = stat(filename.c_str(), &stat_buf);
-    return rc == 0 ? stat_buf.st_size : -1;
-}
 
 acq400_chapi::Ports get_port(){
 	switch(G_mode){
@@ -62,24 +46,6 @@ acq400_chapi::Ports get_port(){
 std::string dist_s1;
 
 long G_file_size;
-
-#define BUFLEN 0x10000
-
-template <class C>
-int awg_loader(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* fp)
-{
-	C* buf = new C[BUFLEN];
-	int nbuf = 0;
-	int skt = 0;
-
-	while ((nbuf = fread(buf, sizeof(C), BUFLEN, fp)) > 0){
-		uut.stream_out(&skt, buf, nbuf, port);
-	}
-
-	uut.stream_out(&skt, buf, 0, port);
-	return 0;
-}
-
 
 void match_buffer_len(acq400_chapi::Acq400& uut, const char* fname)
 {
@@ -118,7 +84,7 @@ void match_buffer_len(acq400_chapi::Acq400& uut, const char* fname)
 template<class C>
 char load_awg(acq400_chapi::Acq400& uut, const char* fname)
 {
-	G_file_size = get_file_size(fname);
+
 	match_buffer_len(uut, fname);
 	FILE* fp = fopen(fname, "rb");
 	if (fp == 0){
@@ -127,7 +93,7 @@ char load_awg(acq400_chapi::Acq400& uut, const char* fname)
 	}
 
 	auto start = std::chrono::high_resolution_clock::now();
-	::awg_loader<C>(uut, get_port(), fp);
+	acq400_chapi::awg_loader<C>(uut, get_port(), fp);
 	auto end = std::chrono::high_resolution_clock::now();
 
 	auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
@@ -141,9 +107,6 @@ char load_awg(acq400_chapi::Acq400& uut, const char* fname)
 
 	return 0;
 }
-
-const char* TRG_SRC_0 = "SIG:SRC:TRG:0";
-char* G_trigger_stash;
 
 int main(int argc, char **argv) {
 	if (argc < 3){
@@ -173,7 +136,7 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
-	std::string response;
+	std::string response;             // response value, unused
 
 	if (uut.set(response, "1", "AWG:DIST=%s", "AWG")){
 		fprintf(stderr, "ERROR: failed to select AWG:DIST=AWG");
@@ -187,6 +150,8 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "ERROR: dist_s1 is not set 1-6 %d\n", std::stoi(::dist_s1));
 		exit(1);
 	}
+
+	G_file_size = get_file_size(data_file);
 
 	if (data32){
 		load_awg<long>(uut, data_file);

@@ -22,6 +22,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
@@ -420,5 +421,11 @@ std::vector<std::string> &split(const std::string &s, char delim, std::vector<st
         elems.push_back(item);
     }
     return elems;
+}
+
+long get_file_size(const std::string& filename) {
+	struct stat stat_buf;
+	int rc = stat(filename.c_str(), &stat_buf);
+	return rc == 0 ? stat_buf.st_size : -1;
 }
 

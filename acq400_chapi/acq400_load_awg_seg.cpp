@@ -36,15 +36,6 @@ enum SwitchSeg { NOSWITCH, SWITCH_LAST = -1, SWITCH_FIRST=1 /* switch msec = N >
 Mode G_mode = ARP;
 int G_switch_seg = NOSWITCH;
 
-#include <sys/stat.h>
-#include <string>
-
-long get_file_size(const std::string& filename) {
-    struct stat stat_buf;
-    int rc = stat(filename.c_str(), &stat_buf);
-    return rc == 0 ? stat_buf.st_size : -1;
-}
-
 std::string dist_s1;
 
 
@@ -98,23 +89,6 @@ void match_buffer_len(acq400_chapi::Acq400& uut, const char* fname)
 	}
 }
 
-#define BUFLEN 0x10000
-
-template <class C>
-int awg_loader(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* fp)
-{
-	C* buf = new C[BUFLEN];
-	int nbuf = 0;
-	int skt = 0;
-
-	while ((nbuf = fread(buf, sizeof(C), BUFLEN, fp)) > 0){
-		uut.stream_out(&skt, buf, nbuf, port);
-	}
-
-	uut.stream_out(&skt, buf, 0, port);
-	return 0;
-}
-
 
 template<class C>
 char load_seg(acq400_chapi::Acq400& uut, const char* sel)
@@ -143,7 +117,7 @@ char load_seg(acq400_chapi::Acq400& uut, const char* sel)
 				acq400_chapi::AWG_SEG_ARP:
 				acq400_chapi::AWG_SEG_CON  )(seg);
 		auto start = std::chrono::high_resolution_clock::now();
-		::awg_loader<C>(uut, port, fp);
+		acq400_chapi::awg_loader<C>(uut, port, fp);
 		auto end = std::chrono::high_resolution_clock::now();
 
 		auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();

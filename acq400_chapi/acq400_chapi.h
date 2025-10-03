@@ -120,6 +120,21 @@ public:
 	virtual int stream_out(int* pskt, short buf[], int maxbuf, enum Ports port=AWG_STREAM);
 	virtual int stream_out(int* pskt, long buf[],  int maxbuf, enum Ports port=AWG_STREAM);
 };
+	const int AWG_LOADER_BUFLEN = 0x10000;
+
+	template <class C>
+	int awg_loader(Acq400& uut, Ports port, FILE* fp){
+		C* buf = new C[AWG_LOADER_BUFLEN];
+		int nbuf = 0;
+		int skt = 0;
+
+		while ((nbuf = fread(buf, sizeof(C), AWG_LOADER_BUFLEN, fp)) > 0){
+			uut.stream_out(&skt, buf, nbuf, port);
+		}
+
+		uut.stream_out(&skt, buf, 0, port);
+		return 0;
+	}
 
 } 	// namespace acq400_chapi
 
