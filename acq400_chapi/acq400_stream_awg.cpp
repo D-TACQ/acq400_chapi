@@ -39,7 +39,6 @@ int streamer(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* fp, bool
 		}
 	}
 
-	fclose(fp);
 	close(skt);
 	return 0;
 }
