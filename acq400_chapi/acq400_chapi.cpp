@@ -269,8 +269,14 @@ int Acq400::get(const std::string& site, const char* key, int& value)
 	}
 	snprintf(lbuf, 130, "%s\n", key);
 	int rc = sc->_sr(rx_message, 16384, lbuf);
+
 	if (rc > 0){
-		return sscanf(rx_message, "%d", &value);
+		int nscan = sscanf(rx_message, "%d", &value);
+		if (nscan == 1){
+			rc = RC_SUCCESS;
+		}else{
+			rc = -1;
+		}
 	}
 	return rc;
 }

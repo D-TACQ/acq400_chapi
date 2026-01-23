@@ -53,12 +53,18 @@ void set_trigger_mode(acq400_chapi::Acq400& uut, int soft_trigger)
 	assert(rc == 0);
 }
 
-void set_uut_mode(acq400_chapi::Acq400& uut){
-	int pack24 = 0;
-	if (getenv("ACQ400_PACK24")){
-		pack24 = atoi(getenv("ACQ400_PACK24"));
+void set_pack24_if_available_and_requested(acq400_chapi::Acq400& uut){
+	int pack24;
+	if (uut.get("1", "pack24", pack24) == acq400_chapi::RC_SUCCESS){
+		pack24 = 0;
+		if (getenv("ACQ400_PACK24")){
+			pack24 = atoi(getenv("ACQ400_PACK24"));
+		}
+		set_data_mode(uut, pack24);
 	}
-	set_data_mode(uut, pack24);
+}
+void set_uut_mode(acq400_chapi::Acq400& uut){
+	set_pack24_if_available_and_requested(uut);
 
 	int soft_trigger = 0;
 	if (getenv("ACQ400_SOFT_TRIGGER")){
