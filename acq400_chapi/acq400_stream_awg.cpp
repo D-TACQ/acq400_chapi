@@ -38,7 +38,7 @@ int streamer(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FPV& files, bo
 				rewind(fp);
 			}
 		}
-	} while(!repeat);
+	} while(repeat);
 
 	close(skt);
 	return 0;
