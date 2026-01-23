@@ -22,12 +22,15 @@
 
 typedef std::vector<FILE*> FPV;
 
+int G_reps;
+
 template <class C>
 int streamer(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FPV& files, bool repeat)
 {
 	C* buf = new C[BUFLEN];
 	int nbuf;
 	int skt = 0;
+	int reps = 0;
 
 	do {
 		for (auto fp: files){
@@ -37,6 +40,9 @@ int streamer(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FPV& files, bo
 			if (repeat){
 				rewind(fp);
 			}
+		}
+		if (++reps > G_reps && G_reps){
+			break;
 		}
 	} while(repeat);
 
@@ -68,7 +74,7 @@ int main(int argc, char **argv) {
 
 	if (argc > 2){
 		int i1 = 2;
-		if (strcmp(argv[2], "repeat") == 0){
+		if (strcmp(argv[2], "repeat") == 0 || (G_reps = atoi(argv[2])) > 0){
 			if (argc > 3){
 				i1 = 3;
 				repeat = true;
