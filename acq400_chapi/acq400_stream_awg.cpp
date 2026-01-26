@@ -20,7 +20,12 @@
 
 #define BUFLEN 0x10000
 
-typedef std::vector<FILE*> FPV;
+struct FileEntry {
+	std::string name;
+	FILE* fp;
+};
+
+typedef std::vector<FileEntry> FPV;
 
 int G_reps;
 
@@ -33,12 +38,13 @@ int streamer(acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FPV& files, bo
 	int reps = 0;
 
 	do {
-		for (auto fp: files){
-			while ((nbuf = fread(buf, sizeof(C), BUFLEN, fp)) > 0){
+		for (auto& fe: files){
+			fprintf(stderr, "streaming file: %s\n", fe.name.c_str());
+			while ((nbuf = fread(buf, sizeof(C), BUFLEN, fe.fp)) > 0){
 				uut.stream_out(&skt, buf, nbuf, port);
 			}
 			if (repeat){
-				rewind(fp);
+				rewind(fe.fp);
 			}
 		}
 		if (++reps > G_reps && G_reps){
@@ -91,11 +97,11 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "ERROR failed to open file \"%s\"\n", fname);
 				exit(1);
 			}
-			files.push_back(fp);
+			files.push_back({fname, fp});
 		}
 
 	}else{
-		files.push_back(stdin);
+		files.push_back({"stdin", stdin});
 	}
 
 	acq400_chapi::Acq400 uut(host);
