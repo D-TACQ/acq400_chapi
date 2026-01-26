@@ -16,7 +16,8 @@ APPS=acq400_chapi_siteclient_test \
 	acq400_stream_awg \
 	acq400_load_awg_seg \
 	acq400_load_awg_oneshot \
-	acq400_chapi_soft_trigger
+	acq400_chapi_soft_trigger \
+	acq400_wait_for_ready \
 
 apps: $(APPS)
 
@@ -34,6 +35,8 @@ acq400_stream_awg: acq400_stream_awg.cpp acq400_chapi.o
 acq400_load_awg_seg: acq400_load_awg_seg.cpp acq400_chapi.o
 
 acq400_load_awg_oneshot: acq400_load_awg_oneshot.cpp acq400_chapi.o
+
+acq400_wait_for_ready: acq400_wait_for_ready.cpp acq400_chapi.o
 
 acq400_chapi.o: acq400_chapi.cpp
 

@@ -416,6 +416,30 @@ void Acq400::select_awg_seg(int* pskt, char seg)
 	stream_out(pskt, &seg, 1, AWG_SEG_SEL);
 }
 
+#define UUT_UP "rclc UP"
+
+int Acq400::wait_for_ready()
+{
+       // virtual int get(std::string& response, const std::string& site, const char* fmt, ...);
+       std::string response;
+       while(true){
+               int rc = this->get(response, "0", "rc_local_complete");
+               if (rc >= 1){
+                       fprintf(stderr, "UUT response \"%s\"\n", response.c_str());
+                       if (strncmp(response.c_str(), UUT_UP, strlen(UUT_UP)) == 0){
+                               fprintf(stderr, "UUT ready\n");
+                               return RC_SUCCESS;
+                       }else{
+                               fprintf(stderr, "UUT is running but not ready\n");
+                       }
+                       sleep(1);
+               }else{
+                       fprintf(stderr, "UUT not running take 5\n");
+                       sleep(5);
+               }
+       }
+       return -1;
+}
 
 }	// namespace acq400_chapi
 	
@@ -434,4 +458,5 @@ long get_file_size(const std::string& filename) {
 	int rc = stat(filename.c_str(), &stat_buf);
 	return rc == 0 ? stat_buf.st_size : -1;
 }
+
 

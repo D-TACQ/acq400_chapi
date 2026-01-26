@@ -123,6 +123,8 @@ public:
 	virtual int stream_out(int* pskt, char buf[], int maxbuf, enum Ports port=AWG_STREAM);
 	virtual int stream_out(int* pskt, short buf[], int maxbuf, enum Ports port=AWG_STREAM);
 	virtual int stream_out(int* pskt, long buf[],  int maxbuf, enum Ports port=AWG_STREAM);
+
+	virtual int wait_for_ready();
 };
 	const int AWG_LOADER_BUFLEN = 0x10000;
 
@@ -139,6 +141,7 @@ public:
 		uut.stream_out(&skt, buf, 0, port);
 		return 0;
 	}
+
 
 } 	// namespace acq400_chapi
 
