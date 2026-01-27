@@ -422,6 +422,13 @@ int Acq400::wait_for_ready()
 {
        // virtual int get(std::string& response, const std::string& site, const char* fmt, ...);
        std::string response;
+       int old_version_retries = 0;
+       int oldfw_bypass = getenvint("OLDFW", 0);
+
+       if (oldfw_bypass){
+	       fprintf(stderr, "WARNING skip wait for ready due to OLDFW\n");
+	       return RC_SUCCESS;
+       }
        while(true){
                int rc = this->get(response, "0", "rc_local_complete");
                if (rc >= 1){
@@ -430,9 +437,18 @@ int Acq400::wait_for_ready()
                                fprintf(stderr, "UUT ready\n");
                                return RC_SUCCESS;
                        }else{
-                               fprintf(stderr, "UUT is running but not ready\n");
+				if (strncmp(response.c_str(), "ERROR:", strlen("ERROR:")) == 0 &&
+					strstr(response.c_str(), "rc_local_complete") &&
+					strstr(response.c_str(), "not found")){
+					if (++old_version_retries >= 3){
+						fprintf(stderr, "Looks like old firmware predates 251131\n");
+						fprintf(stderr, "recommend upgrade or run with OLDFW=1");
+						exit(-1);
+					}
+				}
+				fprintf(stderr, "UUT is running but not ready\n");
                        }
-                       sleep(1);
+                       sleep(2);
                }else{
                        fprintf(stderr, "UUT not running take 5\n");
                        sleep(5);

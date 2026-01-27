@@ -93,6 +93,7 @@ int main(int argc, char **argv) {
 	}
 
 	acq400_chapi::Acq400 uut(host);
+	uut.wait_for_ready();
 
 	set_uut_mode(uut);
 

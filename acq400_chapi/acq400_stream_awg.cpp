@@ -105,6 +105,8 @@ int main(int argc, char **argv) {
 	}
 
 	acq400_chapi::Acq400 uut(host);
+	uut.wait_for_ready();
+
 	int data32;
 	if (uut.get("0", "data32", data32) < 0){
 		fprintf(stderr, "ERROR:");
