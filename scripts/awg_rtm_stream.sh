@@ -114,8 +114,8 @@ cleanup() {
 
 wait_for_ready() {
     # Wait for UUTs to be ready
-    $AO_UUT=$1
-    $AI_UUT=$2
+    AO_UUT=$1
+    AI_UUT=$2
     ./acq400_chapi/acq400_wait_for_ready $AO_UUT
     ./acq400_chapi/acq400_wait_for_ready $AI_UUT
 }
