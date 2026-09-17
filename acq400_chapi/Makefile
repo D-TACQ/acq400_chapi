@@ -13,6 +13,7 @@ lib: acq400_chapi.o
 APPS=acq400_chapi_siteclient_test \
 	acq400_chapi_acq400_test \
 	acq400_stream \
+	acq400_multistream \
 	acq400_stream_awg \
 	acq400_load_awg_seg \
 	acq400_load_awg_oneshot \
@@ -29,6 +30,8 @@ acq400_chapi_soft_trigger: acq400_chapi_soft_trigger.cpp acq400_chapi.o
 acq400_chapi_acq400_test: acq400_chapi_acq400_test.cpp acq400_chapi.o
 
 acq400_stream: acq400_stream.cpp acq400_chapi.o
+
+acq400_multistream: acq400_multistream.cpp acq400_chapi.o
 
 acq400_stream_awg: acq400_stream_awg.cpp acq400_chapi.o
 
