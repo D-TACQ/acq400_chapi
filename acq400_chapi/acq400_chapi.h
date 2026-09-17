@@ -94,9 +94,10 @@ enum { RC_SUCCESS=0 };
 
 class Acq400 {
 	FILE *fstream;
+public:
 	FILE* stream_open(enum Ports port, const char* mode);
 	int stream_open(enum Ports port);
-public:
+
 	const char* uut;
 	std::map<std::string, Siteclient*>sites;
 
@@ -110,6 +111,7 @@ public:
 	virtual int get(const std::string& site, const char* key, int& value);
 	/* returns RC_SUCCESS if it worked */
 
+	virtual int stream(char buf[],  int maxbuf, enum Ports port=STREAM);
 	virtual int stream(short buf[], int maxbuf, enum Ports port=STREAM);
 	virtual int stream(long buf[],  int maxbuf, enum Ports port=STREAM);
 

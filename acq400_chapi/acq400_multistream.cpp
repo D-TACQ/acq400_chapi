@@ -3,16 +3,18 @@
  *
  *  Created on: 10 September 2021
  *
- *  USAGE: acq400_multistream UUT1[:PORT1],UUT2[:PORT2]... [DEFAULT_PORT] [--dir OUT_DIR]
+ *  USAGE: acq400_multistream UUT1[:PORT1],UUT2[:PORT2]... [DEFAULT_PORT] [OUT_DIR]
  *      Author: SR
  */
 
 #include "acq400_chapi.h"
 #include "acq400_chapi_inc.h"
+#include "unpack24.h"
 #include <thread>
 #include <vector>
 #include <string>
 #include <cassert>
+#include <cctype>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -20,6 +22,8 @@
 
 namespace G {
         unsigned long long maxbytes = 0;
+        int nchan = 0;           // 0: query UUT (or fallback to 32)
+        int nspad = -1;          // -1: query UUT (or fallback to 1)
 };
 
 // Helper function to create directories recursively (mkdir -p equivalent)
@@ -59,6 +63,19 @@ int streamer(const std::string& host, acq400_chapi::Acq400& uut, acq400_chapi::P
 
         delete[] buf;
         return 0;
+}
+
+int streamer_unpack24(const std::string& host, acq400_chapi::Acq400& uut, acq400_chapi::Ports port, FILE* out_fp, int nchan, int nspad)
+{
+        FILE* in_fp = uut.stream_open(port, "r");
+        if (!in_fp) {
+                fprintf(stderr, "ERROR [%s]: Unable to open stream socket on port %d\n", host.c_str(), (int)port);
+                return -1;
+        }
+
+        auto unpacker = Unpack24::create(nchan, nspad);
+        fprintf(stderr, "[%s] Unpacking 24-bit data (nchan=%d, nspad=%d) to 32-bit\n", host.c_str(), nchan, nspad);
+        return unpacker->unpack24(in_fp, out_fp, G::maxbytes);
 }
 
 void set_data_mode(acq400_chapi::Acq400& uut, int pack24)
@@ -135,7 +152,31 @@ void worker_thread(std::string target_spec, acq400_chapi::Ports default_port, st
                         return;
                 }
 
-                if (data32){
+                int pack24 = 0;
+                if (uut.get("1", "pack24", pack24) != acq400_chapi::RC_SUCCESS) {
+                        pack24 = 0;
+                }
+
+                if (pack24) {
+                        int nchan = G::nchan;
+                        if (nchan <= 0) {
+                                if (uut.get("1", "NCHAN", nchan) != acq400_chapi::RC_SUCCESS || nchan <= 0) {
+                                        if (uut.get("0", "NCHAN", nchan) != acq400_chapi::RC_SUCCESS || nchan <= 0) {
+                                                nchan = 32;
+                                        }
+                                }
+                        }
+                        int nspad = G::nspad;
+                        if (nspad < 0) {
+                                int spad_val = 0;
+                                if (uut.get("0", "spad", spad_val) == acq400_chapi::RC_SUCCESS) {
+                                        nspad = (spad_val > 0) ? spad_val : 0;
+                                } else {
+                                        nspad = 1;
+                                }
+                        }
+                        streamer_unpack24(host, uut, port, out_fp, nchan, nspad);
+                } else if (data32){
                         streamer<long>(host, uut, port, out_fp);
                 } else {
                         streamer<short>(host, uut, port, out_fp);
@@ -160,6 +201,12 @@ int main(int argc, char **argv) {
         }
         if (getenv("ACQ400_STREAM_MAXM")){
                 G::maxbytes = strtoull(getenv("ACQ400_STREAM_MAXM"), 0, 0) * 0x100000;
+        }
+        if (getenv("ACQ400_NCHAN")){
+                G::nchan = atoi(getenv("ACQ400_NCHAN"));
+        }
+        if (getenv("ACQ400_NSPAD")){
+                G::nspad = atoi(getenv("ACQ400_NSPAD"));
         }
 
         std::string uuts_arg = argv[1];

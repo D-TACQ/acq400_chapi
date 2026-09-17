@@ -292,6 +292,10 @@ FILE* Acq400::stream_open(enum Ports port, const char* mode)
 	}
 	return fstream;
 }
+int Acq400::stream(char buf[], int maxbuf, enum Ports port)
+{
+	return fread(buf, sizeof(char), maxbuf, stream_open(port, "r"));
+}
 int Acq400::stream(short buf[], int maxbuf, enum Ports port)
 {
 	return fread(buf, sizeof(short), maxbuf, stream_open(port, "r"));
