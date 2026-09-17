@@ -1,0 +1,8 @@
+*.dat
+*.raw
+DATA/
+
+acq400_chapi/*
+!acq400_chapi/*.cpp
+!acq400_chapi/Makefile
+!acq400_chapi/*.h
